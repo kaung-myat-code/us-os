@@ -471,8 +471,8 @@ git commit -m "feat: add shared-types package with HealthStatus schema"
   "main": "./src/index.ts",
   "types": "./src/index.ts",
   "scripts": {
-    "db:generate": "prisma generate",
-    "db:migrate": "prisma migrate dev",
+    "db:generate": "prisma generate --allow-no-models",
+    "db:migrate": "prisma migrate dev --skip-generate",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
     "typecheck": "tsc --noEmit"
@@ -490,6 +490,8 @@ git commit -m "feat: add shared-types package with HealthStatus schema"
 ```
 
 `@types/node` is required for `src/client.ts`'s `process.env.NODE_ENV` reference to typecheck (`tsc` reports `TS2580: Cannot find name 'process'` without it) — the same version (`^22.9.0`) already used in `apps/api` and `apps/web`'s devDependencies. This was missing from the task's first attempt; added after that attempt correctly caught the gap.
+
+`db:generate`/`db:migrate` carry `--allow-no-models`/`--skip-generate` for the same root cause documented in Task 5: `prisma migrate dev` normally calls `prisma generate` internally, and Prisma's CLI refuses to generate a client from a zero-model schema. `--allow-no-models` makes `db:generate` succeed anyway (a no-op once real models exist later); `--skip-generate` stops `db:migrate` from triggering that internal call at all, so the two scripts are NOT chained together (an earlier fix attempt chained `db:migrate` into `&& pnpm db:generate`, which broke `pnpm db:migrate -- --name x` passthrough — `--name` landed on the trailing `db:generate` call instead of `prisma migrate dev`; keep them separate). Once a later feature phase adds the first real model, running `db:migrate` then `db:generate` as two explicit steps still works exactly as intended — revisiting whether to re-chain them is that phase's call, not this one's.
 
 - [ ] **Step 2: Write `packages/database/tsconfig.json`**
 
@@ -649,8 +651,15 @@ Expected: command blocks (rather than a fixed `sleep`) until both healthchecks p
 
 - [ ] **Step 3: Copy env file and run the first (empty) migration against the real database**
 
-Run: `cp .env.example packages/database/.env && pnpm --filter @us-os/database db:migrate -- --name init`
-Expected: Prisma reports "Your database is now in sync with your schema" and creates `packages/database/prisma/migrations/<timestamp>_init/migration.sql` (an empty migration, since there are no models yet).
+`prisma migrate dev` won't create a migration folder for a schema that's already trivially "in sync" with an empty database (both sides are empty, so it sees no diff) — force creation with `--create-only`, then apply it separately:
+
+Run:
+```bash
+cp .env.example packages/database/.env
+pnpm --filter @us-os/database exec prisma migrate dev --name init --create-only --skip-generate
+pnpm --filter @us-os/database db:migrate
+```
+Expected: the first command creates `packages/database/prisma/migrations/<timestamp>_init/migration.sql` (containing only `-- This is an empty migration.`, since there are no models yet) and `migration_lock.toml`; the second applies it and reports "Your database is now in sync with your schema."
 
 - [ ] **Step 4: Verify Redis is reachable**
 
