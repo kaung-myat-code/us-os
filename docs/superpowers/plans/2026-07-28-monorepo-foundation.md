@@ -564,15 +564,17 @@ if (process.env.NODE_ENV !== 'production') {
 export * from './client';
 ```
 
-- [ ] **Step 8: Install dependencies and generate the Prisma client**
+- [ ] **Step 8: Install dependencies and validate the Prisma schema**
 
-Run: `pnpm install && pnpm --filter @us-os/database db:generate`
-Expected: `Generated Prisma Client` success message; no models are listed (schema has none yet), which is expected.
+Run: `pnpm install && pnpm --filter @us-os/database exec prisma validate`
+Expected: `The schema at prisma/schema.prisma is valid 🚀`.
+
+(Note: `prisma generate` itself is **not** run in this task. Prisma's CLI categorically refuses to generate a client from a schema with zero models — it exits 1 with "You don't have any models defined in your schema.prisma, so nothing will be generated," even though the datasource/generator blocks are valid. `prisma validate` checks the schema is well-formed without that restriction. The `db:generate` npm script stays in `package.json` as-is — it becomes usable, unmodified, the moment a later feature phase adds the first real model. This is a deliberate, human-approved deviation from this task's original Step 8, made after Task 4's first implementation attempt hit the real Prisma CLI behavior.)
 
 - [ ] **Step 9: Verify typecheck passes**
 
 Run: `pnpm --filter @us-os/database typecheck`
-Expected: exits 0, no output.
+Expected: exits 0, no output. `@prisma/client`'s published package ships placeholder types that satisfy `import { PrismaClient } from '@prisma/client'` even before `prisma generate` has ever run, so this is expected to pass. If it does NOT pass (e.g. because the placeholder types were removed/changed in this Prisma version), stop and report back rather than working around it — that would be a second instance of the same plan-vs-reality gap Step 8 just hit, and needs the same kind of decision.
 
 - [ ] **Step 10: Commit**
 
