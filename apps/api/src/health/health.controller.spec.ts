@@ -1,4 +1,5 @@
 import { Test } from '@nestjs/testing';
+import { HealthStatusSchema } from '@us-os/shared-types';
 import { HealthController } from './health.controller';
 
 describe('HealthController', () => {
@@ -16,6 +17,6 @@ describe('HealthController', () => {
     const result = controller.check();
 
     expect(result.status).toBe('ok');
-    expect(() => new Date(result.timestamp).toISOString()).not.toThrow();
+    expect(HealthStatusSchema.safeParse(result).success).toBe(true);
   });
 });
