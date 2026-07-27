@@ -481,12 +481,15 @@ git commit -m "feat: add shared-types package with HealthStatus schema"
     "@prisma/client": "^5.22.0"
   },
   "devDependencies": {
+    "@types/node": "^22.9.0",
     "prisma": "^5.22.0",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }
 }
 ```
+
+`@types/node` is required for `src/client.ts`'s `process.env.NODE_ENV` reference to typecheck (`tsc` reports `TS2580: Cannot find name 'process'` without it) — the same version (`^22.9.0`) already used in `apps/api` and `apps/web`'s devDependencies. This was missing from the task's first attempt; added after that attempt correctly caught the gap.
 
 - [ ] **Step 2: Write `packages/database/tsconfig.json`**
 
@@ -566,7 +569,9 @@ export * from './client';
 
 - [ ] **Step 8: Install dependencies and validate the Prisma schema**
 
-Run: `pnpm install && pnpm --filter @us-os/database exec prisma validate`
+`prisma validate` resolves `env("DATABASE_URL")` at parse time and errors if the variable isn't set, even though no real connection is made — copy the example env file first (gitignored; do not commit it): `cp packages/database/.env.example packages/database/.env`.
+
+Run: `pnpm install && cp packages/database/.env.example packages/database/.env && pnpm --filter @us-os/database exec prisma validate`
 Expected: `The schema at prisma/schema.prisma is valid 🚀`.
 
 (Note: `prisma generate` itself is **not** run in this task. Prisma's CLI categorically refuses to generate a client from a schema with zero models — it exits 1 with "You don't have any models defined in your schema.prisma, so nothing will be generated," even though the datasource/generator blocks are valid. `prisma validate` checks the schema is well-formed without that restriction. The `db:generate` npm script stays in `package.json` as-is — it becomes usable, unmodified, the moment a later feature phase adds the first real model. This is a deliberate, human-approved deviation from this task's original Step 8, made after Task 4's first implementation attempt hit the real Prisma CLI behavior.)
