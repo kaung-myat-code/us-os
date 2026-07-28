@@ -13,7 +13,8 @@
     "lint": {},
     "typecheck": {},
     "test": {
-      "outputs": ["coverage/**"]
+      "outputs": ["coverage/**"],
+      "env": ["DATABASE_URL", "APP_DATABASE_URL"]
     }
   }
 }
