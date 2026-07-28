@@ -159,6 +159,30 @@ describe('SpacesService (integration)', () => {
       await expect(spacesService.redeemPairingCode(thirdUser.id, 'FULLCODE')).rejects.toThrow(ConflictException);
     });
 
+    it('closes the double-redemption race: two concurrent redeemers of the same valid code, only one succeeds and the Space ends up with exactly 2 members', async () => {
+      const creator = await createUser('redeem-race-creator');
+      const space = await spacesService.createSpace(creator.id, 'Race Space');
+      createdSpaceIds.push(space.id);
+      const { code } = await spacesService.generatePairingCode(creator.id);
+
+      const joinerA = await createUser('redeem-race-joiner-a');
+      const joinerB = await createUser('redeem-race-joiner-b');
+
+      const results = await Promise.allSettled([
+        spacesService.redeemPairingCode(joinerA.id, code),
+        spacesService.redeemPairingCode(joinerB.id, code),
+      ]);
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r) => r.status === 'rejected');
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(GoneException);
+
+      const memberCount = await prisma.spaceMembership.count({ where: { spaceId: space.id } });
+      expect(memberCount).toBe(2);
+    });
+
     it('rejects redemption from a user who already belongs to a Space with 409', async () => {
       const creator = await createUser('redeem-caller-has-space-creator');
       const space = await spacesService.createSpace(creator.id, 'Caller Has Space');
