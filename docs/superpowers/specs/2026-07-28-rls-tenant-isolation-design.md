@@ -15,6 +15,42 @@ Passport-based auth is not yet implemented in `apps/api`. This design
 deliberately decouples tenant-context plumbing from auth so it can be built
 and tested now, with a single swap-in point for real auth later.
 
+## Safety invariant
+
+**Every query against a tenant-scoped model runs on a connection where
+`app.current_space_id` has been set to the caller's `spaceId`, within the
+same transaction as the query.**
+
+Three cooperating pieces maintain this invariant:
+
+1. **NestJS middleware** — populates `TenantContext` from the request, per
+   request.
+2. **Prisma Client Extension** — calls `set_config('app.current_space_id',
+   ...)` and the model operation inside the same transaction, on every call
+   through the ORM.
+3. **RLS policy** — filters (`USING`) and validates (`WITH CHECK`) every row
+   against `current_setting('app.current_space_id', ...)`.
+
+If any piece is bypassed or misconfigured, the system is designed to fail
+closed: a missing `TenantContext` throws before any SQL is issued, and a
+missing/empty session variable makes the RLS policy match zero rows rather
+than leaking or erroring. Anyone changing the session variable name
+(`'app.current_space_id'`) must update it in both the extension and the
+policy SQL — nothing enforces that the two stay in sync besides this note.
+
+**The one way to break the invariant silently: raw queries.** Calling
+`prisma.$queryRaw`/`$executeRaw` directly against a tenant-scoped table
+bypasses the extension's `$allOperations` hook entirely, so no `set_config`
+runs on that connection. Because Prisma's pool reuses connections across
+requests, a raw query could then either fail closed (no `app.current_space_id`
+ever set on that connection) or, worse, inherit a stale value left by a
+previous request's `SET LOCAL`/`set_config` if a prior transaction's
+in-transaction setting somehow leaked past commit — in practice `set_config`
+with `is_local = true` is cleared at transaction end, so the realistic
+failure mode is "no rows" rather than cross-tenant leakage, but raw queries
+against tenant-scoped tables should be avoided; route through the Prisma
+Client model methods instead.
+
 ## Schema
 
 ```prisma
