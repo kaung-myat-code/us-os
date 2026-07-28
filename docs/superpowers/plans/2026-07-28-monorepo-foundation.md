@@ -1,6 +1,6 @@
 # Monorepo Foundation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Stand up the Relationship OS (`us-os`) Turborepo monorepo skeleton — pnpm workspaces, `apps/web`, `apps/api`, `packages/database`, `packages/shared-types`, `packages/config`, `turbo.json`, and a `docker-compose.yml` for local Postgres 16 + Redis — with each piece buildable, lintable, and testable end to end.
 
@@ -101,7 +101,7 @@ Files that change together stay together: each workspace package is fully self-c
 - Produces: root scripts `dev`, `build`, `lint`, `test`, `typecheck`, `db:migrate`, `db:generate`, `db:studio`, `db:seed` — all later tasks' packages must expose the matching per-package script names (`dev`, `build`, `lint`, `test`, `typecheck`) for Turborepo to fan them out.
 - Produces: pnpm workspace globs `apps/*` and `packages/*` — every subsequent task's package must live under one of these two directories to be picked up.
 
-- [ ] **Step 1: Write `pnpm-workspace.yaml`**
+- [x] **Step 1: Write `pnpm-workspace.yaml`**
 
 ```yaml
 packages:
@@ -109,7 +109,7 @@ packages:
   - "packages/*"
 ```
 
-- [ ] **Step 2: Write the root `package.json`**
+- [x] **Step 2: Write the root `package.json`**
 
 ```json
 {
@@ -141,7 +141,7 @@ packages:
 }
 ```
 
-- [ ] **Step 3: Write `.npmrc`**
+- [x] **Step 3: Write `.npmrc`**
 
 ```
 auto-install-peers=true
@@ -150,7 +150,7 @@ strict-peer-dependencies=false
 
 `auto-install-peers=true` avoids manual peer-dependency installs across the Next.js/NestJS/Prisma toolchain. `strict-peer-dependencies` is left `false` (not `true`) deliberately: Next.js and NestJS both carry peer ranges that lag their own dependents' actual releases, so `true` would turn routine peer-version drift into hard install failures — the workspace already pins exact compatible majors (see Global Constraints), so strict enforcement adds risk without real benefit here.
 
-- [ ] **Step 4: Write `.gitignore`**
+- [x] **Step 4: Write `.gitignore`**
 
 ```
 node_modules
@@ -164,7 +164,7 @@ coverage
 .DS_Store
 ```
 
-- [ ] **Step 5: Write `.env.example`**
+- [x] **Step 5: Write `.env.example`**
 
 ```
 DATABASE_URL="postgresql://us_os:us_os_dev_password@localhost:5432/us_os_dev?schema=public"
@@ -172,12 +172,12 @@ REDIS_URL="redis://localhost:6379"
 PORT=3001
 ```
 
-- [ ] **Step 6: Verify pnpm recognizes the workspace**
+- [x] **Step 6: Verify pnpm recognizes the workspace**
 
 Run: `pnpm -v && pnpm ls --depth -1`
 Expected: prints `9.15.9` (or newer 9.x) and reports no workspace packages found yet (none created), without erroring on workspace config.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add package.json pnpm-workspace.yaml .npmrc .gitignore .env.example
@@ -199,7 +199,7 @@ git commit -m "chore: scaffold root pnpm workspace"
 - Produces: `packages/config/eslint-preset.cjs` — a CommonJS ESLint config object consumed by `packages/shared-types` and `packages/database` (plain TS packages; `apps/web` and `apps/api` use their own framework-specific ESLint configs instead, per Task 7/8).
 - This package intentionally has no `lint`/`test`/`typecheck` scripts of its own: it contains only `.json`/`.cjs` config files with no TypeScript source to check and nothing to unit test. Turborepo skips packages that lack a given task's script, so `pnpm lint`/`pnpm typecheck`/`pnpm test` simply omit `@us-os/config` — this is expected, not a gap.
 
-- [ ] **Step 1: Write `packages/config/package.json`**
+- [x] **Step 1: Write `packages/config/package.json`**
 
 ```json
 {
@@ -214,7 +214,7 @@ git commit -m "chore: scaffold root pnpm workspace"
 }
 ```
 
-- [ ] **Step 2: Write `packages/config/tsconfig.base.json`**
+- [x] **Step 2: Write `packages/config/tsconfig.base.json`**
 
 ```json
 {
@@ -236,7 +236,7 @@ git commit -m "chore: scaffold root pnpm workspace"
 }
 ```
 
-- [ ] **Step 3: Write `packages/config/prettier.config.cjs`**
+- [x] **Step 3: Write `packages/config/prettier.config.cjs`**
 
 ```js
 module.exports = {
@@ -248,7 +248,7 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 4: Write `packages/config/eslint-preset.cjs`**
+- [x] **Step 4: Write `packages/config/eslint-preset.cjs`**
 
 ```js
 module.exports = {
@@ -261,7 +261,7 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 5: Add shared ESLint/TypeScript-ESLint devDependencies to the root `package.json`**
+- [x] **Step 5: Add shared ESLint/TypeScript-ESLint devDependencies to the root `package.json`**
 
 Edit `package.json`'s `devDependencies` (from Task 1) to:
 
@@ -278,12 +278,12 @@ Edit `package.json`'s `devDependencies` (from Task 1) to:
 }
 ```
 
-- [ ] **Step 6: Verify the JSON/JS files parse**
+- [x] **Step 6: Verify the JSON/JS files parse**
 
 Run: `node -e "require('./packages/config/prettier.config.cjs'); require('./packages/config/eslint-preset.cjs'); console.log('ok')"`
 Expected: prints `ok`.
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/config package.json
@@ -307,7 +307,7 @@ git commit -m "chore: add shared config package"
 - Consumes: `packages/config/tsconfig.base.json` and `packages/config/eslint-preset.cjs` (Task 2).
 - Produces: `HealthStatusSchema` (Zod schema) and `HealthStatus` (inferred type), exported from `@us-os/shared-types` — consumed by `apps/api`'s `HealthController` (Task 7) and `apps/web`'s home page (Task 8).
 
-- [ ] **Step 1: Write `packages/shared-types/package.json`**
+- [x] **Step 1: Write `packages/shared-types/package.json`**
 
 ```json
 {
@@ -336,7 +336,7 @@ git commit -m "chore: add shared config package"
 
 `eslint` and `@typescript-eslint/*` are declared here directly (not left to hoist from the root) so `pnpm --filter @us-os/shared-types lint` resolves them deterministically regardless of pnpm's hoisting behavior.
 
-- [ ] **Step 2: Write `packages/shared-types/.eslintrc.cjs`**
+- [x] **Step 2: Write `packages/shared-types/.eslintrc.cjs`**
 
 ```js
 module.exports = {
@@ -344,7 +344,7 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 3: Write `packages/shared-types/tsconfig.json`**
+- [x] **Step 3: Write `packages/shared-types/tsconfig.json`**
 
 ```json
 {
@@ -357,7 +357,7 @@ module.exports = {
 }
 ```
 
-- [ ] **Step 4: Write `packages/shared-types/vitest.config.ts`**
+- [x] **Step 4: Write `packages/shared-types/vitest.config.ts`**
 
 ```ts
 import { defineConfig } from 'vitest/config';
@@ -370,7 +370,7 @@ export default defineConfig({
 });
 ```
 
-- [ ] **Step 5: Write the failing test — `packages/shared-types/src/health.test.ts`**
+- [x] **Step 5: Write the failing test — `packages/shared-types/src/health.test.ts`**
 
 ```ts
 import { describe, expect, it } from 'vitest';
@@ -403,12 +403,12 @@ describe('HealthStatusSchema', () => {
 });
 ```
 
-- [ ] **Step 6: Install dependencies so vitest is resolvable, then run the test to verify it fails**
+- [x] **Step 6: Install dependencies so vitest is resolvable, then run the test to verify it fails**
 
 Run: `pnpm install && pnpm --filter @us-os/shared-types test`
 Expected: FAIL — `Cannot find module './health'` (or similar), since `src/health.ts` does not exist yet.
 
-- [ ] **Step 7: Write the minimal implementation — `packages/shared-types/src/health.ts`**
+- [x] **Step 7: Write the minimal implementation — `packages/shared-types/src/health.ts`**
 
 ```ts
 import { z } from 'zod';
@@ -421,23 +421,23 @@ export const HealthStatusSchema = z.object({
 export type HealthStatus = z.infer<typeof HealthStatusSchema>;
 ```
 
-- [ ] **Step 8: Write the barrel file — `packages/shared-types/src/index.ts`**
+- [x] **Step 8: Write the barrel file — `packages/shared-types/src/index.ts`**
 
 ```ts
 export * from './health';
 ```
 
-- [ ] **Step 9: Run the test to verify it passes**
+- [x] **Step 9: Run the test to verify it passes**
 
 Run: `pnpm --filter @us-os/shared-types test`
 Expected: PASS — all 3 tests green.
 
-- [ ] **Step 10: Verify typecheck and lint pass**
+- [x] **Step 10: Verify typecheck and lint pass**
 
 Run: `pnpm --filter @us-os/shared-types typecheck && pnpm --filter @us-os/shared-types lint`
 Expected: both exit 0, no output.
 
-- [ ] **Step 11: Commit**
+- [x] **Step 11: Commit**
 
 ```bash
 git add packages/shared-types
@@ -461,7 +461,7 @@ git commit -m "feat: add shared-types package with HealthStatus schema"
 - Consumes: `packages/config/tsconfig.base.json` (Task 2).
 - Produces: `prisma` (a `PrismaClient` singleton), exported from `@us-os/database` — later feature phases import this to run queries; no consumer exists yet in this plan.
 
-- [ ] **Step 1: Write `packages/database/package.json`**
+- [x] **Step 1: Write `packages/database/package.json`**
 
 ```json
 {
@@ -493,7 +493,7 @@ git commit -m "feat: add shared-types package with HealthStatus schema"
 
 `db:generate`/`db:migrate` carry `--allow-no-models`/`--skip-generate` for the same root cause documented in Task 5: `prisma migrate dev` normally calls `prisma generate` internally, and Prisma's CLI refuses to generate a client from a zero-model schema. `--allow-no-models` makes `db:generate` succeed anyway (a no-op once real models exist later); `--skip-generate` stops `db:migrate` from triggering that internal call at all, so the two scripts are NOT chained together (an earlier fix attempt chained `db:migrate` into `&& pnpm db:generate`, which broke `pnpm db:migrate -- --name x` passthrough — `--name` landed on the trailing `db:generate` call instead of `prisma migrate dev`; keep them separate). Once a later feature phase adds the first real model, running `db:migrate` then `db:generate` as two explicit steps still works exactly as intended — revisiting whether to re-chain them is that phase's call, not this one's.
 
-- [ ] **Step 2: Write `packages/database/tsconfig.json`**
+- [x] **Step 2: Write `packages/database/tsconfig.json`**
 
 ```json
 {
@@ -506,13 +506,13 @@ git commit -m "feat: add shared-types package with HealthStatus schema"
 }
 ```
 
-- [ ] **Step 3: Write `packages/database/.env.example`**
+- [x] **Step 3: Write `packages/database/.env.example`**
 
 ```
 DATABASE_URL="postgresql://us_os:us_os_dev_password@localhost:5432/us_os_dev?schema=public"
 ```
 
-- [ ] **Step 4: Write `packages/database/prisma/schema.prisma`**
+- [x] **Step 4: Write `packages/database/prisma/schema.prisma`**
 
 ```prisma
 datasource db {
@@ -529,7 +529,7 @@ generator client {
 // so `prisma generate`/`migrate` work end to end for this foundation phase.
 ```
 
-- [ ] **Step 5: Write `packages/database/prisma/seed.ts`**
+- [x] **Step 5: Write `packages/database/prisma/seed.ts`**
 
 ```ts
 import { prisma } from '../src/client';
@@ -549,7 +549,7 @@ main()
   });
 ```
 
-- [ ] **Step 6: Write `packages/database/src/client.ts`**
+- [x] **Step 6: Write `packages/database/src/client.ts`**
 
 ```ts
 import { PrismaClient } from '@prisma/client';
@@ -563,13 +563,13 @@ if (process.env.NODE_ENV !== 'production') {
 }
 ```
 
-- [ ] **Step 7: Write `packages/database/src/index.ts`**
+- [x] **Step 7: Write `packages/database/src/index.ts`**
 
 ```ts
 export * from './client';
 ```
 
-- [ ] **Step 8: Install dependencies and validate the Prisma schema**
+- [x] **Step 8: Install dependencies and validate the Prisma schema**
 
 `prisma validate` resolves `env("DATABASE_URL")` at parse time and errors if the variable isn't set, even though no real connection is made — copy the example env file first (gitignored; do not commit it): `cp packages/database/.env.example packages/database/.env`.
 
@@ -578,12 +578,12 @@ Expected: `The schema at prisma/schema.prisma is valid 🚀`.
 
 (Note: `prisma generate` itself is **not** run in this task. Prisma's CLI categorically refuses to generate a client from a schema with zero models — it exits 1 with "You don't have any models defined in your schema.prisma, so nothing will be generated," even though the datasource/generator blocks are valid. `prisma validate` checks the schema is well-formed without that restriction. The `db:generate` npm script stays in `package.json` as-is — it becomes usable, unmodified, the moment a later feature phase adds the first real model. This is a deliberate, human-approved deviation from this task's original Step 8, made after Task 4's first implementation attempt hit the real Prisma CLI behavior.)
 
-- [ ] **Step 9: Verify typecheck passes**
+- [x] **Step 9: Verify typecheck passes**
 
 Run: `pnpm --filter @us-os/database typecheck`
 Expected: exits 0, no output. `@prisma/client`'s published package ships placeholder types that satisfy `import { PrismaClient } from '@prisma/client'` even before `prisma generate` has ever run, so this is expected to pass. If it does NOT pass (e.g. because the placeholder types were removed/changed in this Prisma version), stop and report back rather than working around it — that would be a second instance of the same plan-vs-reality gap Step 8 just hit, and needs the same kind of decision.
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add packages/database
@@ -603,7 +603,7 @@ Connecting to Postgres and running `db:migrate` is verified in Task 5, once the 
 - Consumes: `DATABASE_URL`/`REDIS_URL` values from `.env.example` (Task 1) — the compose file's credentials must match those exactly.
 - Produces: a running `us-os-postgres` container on `localhost:5432` and `us-os-redis` container on `localhost:6379`, which `packages/database`'s `db:migrate` (Task 4) and later `apps/api` (Task 7) connect to.
 
-- [ ] **Step 1: Write `docker-compose.yml`**
+- [x] **Step 1: Write `docker-compose.yml`**
 
 ```yaml
 services:
@@ -644,12 +644,12 @@ volumes:
   redis_data:
 ```
 
-- [ ] **Step 2: Bring the stack up and block until both containers report healthy**
+- [x] **Step 2: Bring the stack up and block until both containers report healthy**
 
 Run: `docker compose up -d --wait`
 Expected: command blocks (rather than a fixed `sleep`) until both healthchecks pass, then exits 0. The healthchecks retry every 5s up to 5 times, so a fixed `sleep 5` can't be trusted to outlast a slow container start — `--wait` waits for the actual healthy state instead, however long that takes, and fails loudly if a container never becomes healthy.
 
-- [ ] **Step 3: Copy env file and run the first (empty) migration against the real database**
+- [x] **Step 3: Copy env file and run the first (empty) migration against the real database**
 
 `prisma migrate dev` won't create a migration folder for a schema that's already trivially "in sync" with an empty database (both sides are empty, so it sees no diff) — force creation with `--create-only`, then apply it separately:
 
@@ -661,17 +661,17 @@ pnpm --filter @us-os/database db:migrate
 ```
 Expected: the first command creates `packages/database/prisma/migrations/<timestamp>_init/migration.sql` (containing only `-- This is an empty migration.`, since there are no models yet) and `migration_lock.toml`; the second applies it and reports "Your database is now in sync with your schema."
 
-- [ ] **Step 4: Verify Redis is reachable**
+- [x] **Step 4: Verify Redis is reachable**
 
 Run: `docker exec us-os-redis redis-cli ping`
 Expected: prints `PONG`.
 
-- [ ] **Step 5: Verify the seed script runs against the live database**
+- [x] **Step 5: Verify the seed script runs against the live database**
 
 Run: `pnpm --filter @us-os/database db:seed`
 Expected: prints the two log lines from `prisma/seed.ts` and exits 0 (it connects and disconnects cleanly; there's nothing to seed yet since no models exist).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add docker-compose.yml packages/database/prisma/migrations
@@ -688,7 +688,7 @@ git commit -m "chore: add docker-compose for Postgres 16 and Redis, first migrat
 **Interfaces:**
 - Consumes: the `dev`/`build`/`lint`/`test`/`typecheck` script names produced by Task 1 and every package task (2–5, 7, 8) — `turbo.json` task keys must match those script names exactly.
 
-- [ ] **Step 1: Write `turbo.json`**
+- [x] **Step 1: Write `turbo.json`**
 
 ```json
 {
@@ -714,12 +714,12 @@ git commit -m "chore: add docker-compose for Postgres 16 and Redis, first migrat
 
 `lint`, `typecheck`, and `test` deliberately have no `dependsOn: ["^build"]`. Every workspace package's `main`/`types` field points straight at its `src/` (not a compiled `dist/`), so downstream packages type-check and test against source directly — there's nothing built to wait on, and requiring it would only slow down local iteration for no correctness benefit. `build` keeps `dependsOn: ["^build"]` since it's the conventional Turborepo default for forward-compatibility (e.g. if a package later needs to consume a real compiled artifact from another package) — today it's a no-op since neither `@us-os/shared-types` nor `@us-os/database` has a `build` script, so Turborepo just skips them.
 
-- [ ] **Step 2: Verify Turborepo picks up the two existing packages with typecheck/test tasks**
+- [x] **Step 2: Verify Turborepo picks up the two existing packages with typecheck/test tasks**
 
 Run: `pnpm typecheck`
 Expected: Turborepo runs `typecheck` for `@us-os/shared-types` and `@us-os/database` (the only packages with that script so far) and reports success for both, e.g. `Tasks: 2 successful, 2 total`.
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add turbo.json
@@ -745,7 +745,7 @@ git commit -m "chore: add turborepo pipeline config"
 - Consumes: `HealthStatus` type from `@us-os/shared-types` (Task 3); `packages/config/tsconfig.base.json` (Task 2).
 - Produces: a `GET /health` HTTP endpoint returning `{ status: 'ok', timestamp: string }`, verified live in Step 11.
 
-- [ ] **Step 1: Write `apps/api/package.json`**
+- [x] **Step 1: Write `apps/api/package.json`**
 
 ```json
 {
@@ -790,7 +790,7 @@ git commit -m "chore: add turborepo pipeline config"
 
 `eslint` and `@typescript-eslint/*` are declared directly in this package (not inherited from the root or from `packages/config`'s ESLint preset) because the `lint` script below invokes the `eslint` CLI standalone, and NestJS apps conventionally carry their own `.eslintrc.json` tuned for decorator-heavy code (written in Step 5) rather than the plain-TS preset used by `packages/shared-types`/`packages/database`.
 
-- [ ] **Step 2: Write `apps/api/nest-cli.json`**
+- [x] **Step 2: Write `apps/api/nest-cli.json`**
 
 ```json
 {
@@ -803,7 +803,7 @@ git commit -m "chore: add turborepo pipeline config"
 }
 ```
 
-- [ ] **Step 3: Write `apps/api/tsconfig.json`**
+- [x] **Step 3: Write `apps/api/tsconfig.json`**
 
 ```json
 {
@@ -824,7 +824,7 @@ git commit -m "chore: add turborepo pipeline config"
 }
 ```
 
-- [ ] **Step 4: Write `apps/api/jest.config.js`**
+- [x] **Step 4: Write `apps/api/jest.config.js`**
 
 ```js
 module.exports = {
@@ -840,7 +840,7 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 5: Write `apps/api/.eslintrc.json`**
+- [x] **Step 5: Write `apps/api/.eslintrc.json`**
 
 ```json
 {
@@ -863,7 +863,7 @@ module.exports = {
 }
 ```
 
-- [ ] **Step 6: Write the failing test — `apps/api/src/health/health.controller.spec.ts`**
+- [x] **Step 6: Write the failing test — `apps/api/src/health/health.controller.spec.ts`**
 
 ```ts
 import { Test } from '@nestjs/testing';
@@ -889,12 +889,12 @@ describe('HealthController', () => {
 });
 ```
 
-- [ ] **Step 7: Install dependencies, then run the test to verify it fails**
+- [x] **Step 7: Install dependencies, then run the test to verify it fails**
 
 Run: `pnpm install && pnpm --filter @us-os/api test`
 Expected: FAIL — `Cannot find module './health.controller'`.
 
-- [ ] **Step 8: Write the minimal implementation**
+- [x] **Step 8: Write the minimal implementation**
 
 `apps/api/src/health/health.controller.ts`:
 
@@ -941,22 +941,22 @@ async function bootstrap() {
 bootstrap();
 ```
 
-- [ ] **Step 9: Run the test to verify it passes**
+- [x] **Step 9: Run the test to verify it passes**
 
 Run: `pnpm --filter @us-os/api test`
 Expected: PASS — 1 test green.
 
-- [ ] **Step 10: Verify lint passes**
+- [x] **Step 10: Verify lint passes**
 
 Run: `pnpm --filter @us-os/api lint`
 Expected: exits 0, no output (the `--fix` in the `lint` script auto-fixes trivial style issues; nothing should remain unfixable in this scaffold).
 
-- [ ] **Step 11: Build and boot the API, then verify the endpoint live**
+- [x] **Step 11: Build and boot the API, then verify the endpoint live**
 
 Run: `pnpm --filter @us-os/api build && (pnpm --filter @us-os/api start &) && sleep 2 && curl -s http://localhost:3001/health && echo && kill %1 2>/dev/null`
 Expected: prints JSON like `{"status":"ok","timestamp":"2026-07-28T...Z"}`.
 
-- [ ] **Step 12: Commit**
+- [x] **Step 12: Commit**
 
 ```bash
 git add apps/api
@@ -983,7 +983,7 @@ git commit -m "feat: add NestJS api app with health endpoint"
 - Consumes: `HealthStatus` type from `@us-os/shared-types` (Task 3); `packages/config/tsconfig.base.json` (Task 2).
 - Produces: a home page served at `/` proving the app builds, runs, and resolves the shared-types workspace package.
 
-- [ ] **Step 1: Write `apps/web/package.json`**
+- [x] **Step 1: Write `apps/web/package.json`**
 
 ```json
 {
@@ -1017,7 +1017,7 @@ git commit -m "feat: add NestJS api app with health endpoint"
 }
 ```
 
-- [ ] **Step 2: Write `apps/web/next.config.js`**
+- [x] **Step 2: Write `apps/web/next.config.js`**
 
 ```js
 /** @type {import('next').NextConfig} */
@@ -1028,7 +1028,7 @@ const nextConfig = {
 module.exports = nextConfig;
 ```
 
-- [ ] **Step 3: Write `apps/web/tailwind.config.ts`**
+- [x] **Step 3: Write `apps/web/tailwind.config.ts`**
 
 ```ts
 import type { Config } from 'tailwindcss';
@@ -1044,7 +1044,7 @@ const config: Config = {
 export default config;
 ```
 
-- [ ] **Step 4: Write `apps/web/postcss.config.js`**
+- [x] **Step 4: Write `apps/web/postcss.config.js`**
 
 ```js
 module.exports = {
@@ -1055,7 +1055,7 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 5: Write `apps/web/.eslintrc.json`**
+- [x] **Step 5: Write `apps/web/.eslintrc.json`**
 
 ```json
 {
@@ -1063,7 +1063,7 @@ module.exports = {
 }
 ```
 
-- [ ] **Step 6: Write `apps/web/tsconfig.json`**
+- [x] **Step 6: Write `apps/web/tsconfig.json`**
 
 ```json
 {
@@ -1086,7 +1086,7 @@ module.exports = {
 }
 ```
 
-- [ ] **Step 7: Write `apps/web/next-env.d.ts`**
+- [x] **Step 7: Write `apps/web/next-env.d.ts`**
 
 ```ts
 /// <reference types="next" />
@@ -1096,7 +1096,7 @@ module.exports = {
 // see https://nextjs.org/docs/app/api-reference/config/typescript for more information.
 ```
 
-- [ ] **Step 8: Write `apps/web/app/globals.css`**
+- [x] **Step 8: Write `apps/web/app/globals.css`**
 
 ```css
 @tailwind base;
@@ -1104,7 +1104,7 @@ module.exports = {
 @tailwind utilities;
 ```
 
-- [ ] **Step 9: Write `apps/web/app/layout.tsx`**
+- [x] **Step 9: Write `apps/web/app/layout.tsx`**
 
 ```tsx
 import type { Metadata } from 'next';
@@ -1124,7 +1124,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
 }
 ```
 
-- [ ] **Step 10: Write `apps/web/app/page.tsx`**
+- [x] **Step 10: Write `apps/web/app/page.tsx`**
 
 ```tsx
 import type { HealthStatus } from '@us-os/shared-types';
@@ -1149,17 +1149,17 @@ export default function HomePage() {
 }
 ```
 
-- [ ] **Step 11: Install dependencies and build**
+- [x] **Step 11: Install dependencies and build**
 
 Run: `pnpm install && pnpm --filter @us-os/web build`
 Expected: Next.js build completes with `Compiled successfully` and a static `/` route listed in the output.
 
-- [ ] **Step 12: Boot the app and verify the home page live**
+- [x] **Step 12: Boot the app and verify the home page live**
 
 Run: `(pnpm --filter @us-os/web start &) && sleep 3 && curl -s http://localhost:3000 | grep -o 'Relationship OS' && kill %1 2>/dev/null`
 Expected: prints `Relationship OS`.
 
-- [ ] **Step 13: Commit**
+- [x] **Step 13: Commit**
 
 ```bash
 git add apps/web
@@ -1176,27 +1176,27 @@ git commit -m "feat: add Next.js web app shell"
 **Interfaces:**
 - Consumes: every script and package produced in Tasks 1–8.
 
-- [ ] **Step 1: Clean install from scratch**
+- [x] **Step 1: Clean install from scratch**
 
 Run: `rm -rf node_modules apps/*/node_modules packages/*/node_modules && pnpm install`
 Expected: installs with no errors, lockfile unchanged (or updated deterministically).
 
-- [ ] **Step 2: Run the full build pipeline**
+- [x] **Step 2: Run the full build pipeline**
 
 Run: `pnpm build`
 Expected: Turborepo reports all 3 buildable packages (`@us-os/shared-types` has no build script so it's skipped by Turbo, `@us-os/database`, `@us-os/api`, `@us-os/web`) succeed, e.g. `Tasks: 2 successful, 2 total` for build (api + web; database has no `build` script either, which is fine — Turbo skips packages missing a task).
 
-- [ ] **Step 3: Run the full test suite**
+- [x] **Step 3: Run the full test suite**
 
 Run: `pnpm test`
 Expected: `@us-os/shared-types` (3 tests) and `@us-os/api` (1 test) both pass; Turbo reports `Tasks: 2 successful, 2 total`.
 
-- [ ] **Step 4: Run typecheck and lint across the workspace**
+- [x] **Step 4: Run typecheck and lint across the workspace**
 
 Run: `pnpm typecheck && pnpm lint`
 Expected: `typecheck` exits 0 across the 4 packages that have that script (`@us-os/shared-types`, `@us-os/database`, `@us-os/api`, `@us-os/web`); `lint` exits 0 across the 3 packages that have that script (`@us-os/shared-types`, `@us-os/api`, `@us-os/web` — `@us-os/database` has no `lint` script and is skipped by Turbo).
 
-- [ ] **Step 5: Verify the full local stack together**
+- [x] **Step 5: Verify the full local stack together**
 
 If Task 5's containers are still running from earlier, `docker compose up -d --wait` below is a harmless no-op. Do **not** run `docker compose down` afterward here — that would tear down the shared dev Postgres/Redis containers other tasks (and ongoing local development) rely on. Stopping the stack is a separate, deliberate action the engineer takes when they're done for the session, not part of this verification.
 
@@ -1214,7 +1214,7 @@ kill %1 %2 2>/dev/null
 ```
 Expected: `/health` returns JSON with `"status":"ok"`, and the web page contains `Relationship OS`. The Postgres/Redis containers are left running.
 
-- [ ] **Step 6: Commit (only if any fixes were needed in prior steps)**
+- [x] **Step 6: Commit (only if any fixes were needed in prior steps)**
 
 ```bash
 git add -A
