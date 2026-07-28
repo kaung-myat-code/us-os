@@ -79,4 +79,44 @@ describe('RLS tenant isolation (integration)', () => {
     const after = await TenantContext.run(spaceA.id, () => prisma.milestone.count());
     expect(after).toBe(before);
   });
+
+  it('reuses the active transaction when withTenantTransaction is nested, rather than opening a second one', async () => {
+    let innerTx: unknown;
+    let outerTx: unknown;
+
+    await TenantContext.run(spaceA.id, () =>
+      withTenantTransaction(async (tx) => {
+        outerTx = tx;
+        await withTenantTransaction(async (nestedTx) => {
+          innerTx = nestedTx;
+        });
+      }),
+    );
+
+    expect(innerTx === outerTx).toBe(true);
+  });
+
+  it('rolls back the outer transaction when a nested withTenantTransaction call fails', async () => {
+    const before = await TenantContext.run(spaceA.id, () => prisma.milestone.count());
+
+    await expect(
+      TenantContext.run(spaceA.id, () =>
+        withTenantTransaction(async (outerTx) => {
+          await outerTx.milestone.create({
+            data: { spaceId: spaceA.id, title: 'outer write', occurredAt: new Date() },
+          });
+          // Nested call reuses the outer transaction, so its failure rolls back
+          // the outer write above too, not just its own.
+          await withTenantTransaction(async (innerTx) => {
+            await innerTx.milestone.create({
+              data: { spaceId: spaceB.id, title: 'invalid nested write', occurredAt: new Date() },
+            });
+          });
+        }),
+      ),
+    ).rejects.toThrow();
+
+    const after = await TenantContext.run(spaceA.id, () => prisma.milestone.count());
+    expect(after).toBe(before);
+  });
 });

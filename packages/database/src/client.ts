@@ -55,6 +55,18 @@ export const prisma = basePrisma.$extends({
 export async function withTenantTransaction<T>(
   fn: (tx: Prisma.TransactionClient) => Promise<T>,
 ): Promise<T> {
+  // If we're already inside a transaction (our own withTenantTransaction, or a
+  // tenant-scoped call that opened one), reuse it instead of opening a second,
+  // unrelated one: nesting basePrisma.$transaction calls would pull a second
+  // connection from the pool and break atomicity between the two — a failure
+  // in the inner call wouldn't necessarily undo writes already committed by a
+  // separate outer transaction, and a small pool could deadlock waiting for a
+  // connection the outer transaction is still holding.
+  const activeTx = TenantContext.activeTx;
+  if (activeTx) {
+    return fn(activeTx);
+  }
+
   const spaceId = TenantContext.spaceId;
   return basePrisma.$transaction(async (tx) => {
     await tx.$executeRaw`SELECT set_config('app.current_space_id', ${spaceId}, true)`;
