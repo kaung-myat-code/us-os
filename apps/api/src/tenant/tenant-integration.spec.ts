@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { prisma } from '@us-os/database';
+import { prisma, TenantContext } from '@us-os/database';
 import cookieParser from 'cookie-parser';
 import request from 'supertest';
 import { AuthModule } from '../auth/auth.module';
@@ -77,6 +77,7 @@ describe('Tenant context integration (RLS pipeline + JWT payload)', () => {
       .split(';')[0]!
       .split('=')[1]!;
     const memberAPayload = sessionService.verify(memberAToken);
+    expect(memberAPayload!.spaceId).toBe(spaceARes.body.id);
 
     const creatorC = await registerAndGetCookie('rls-c-creator');
     const spaceCRes = await request(app.getHttpServer())
@@ -84,17 +85,45 @@ describe('Tenant context integration (RLS pipeline + JWT payload)', () => {
       .set('Cookie', creatorC.cookie)
       .send({ name: 'RLS Space C' });
 
-    // Directly verify the SET LOCAL pipeline: TenantContext.run mirrors what
-    // TenantMiddleware does for a real request carrying this cookie's payload.
-    const { TenantContext } = await import('@us-os/database');
-    const currentSettingForA = await TenantContext.run(memberAPayload!.spaceId as string, () =>
-      prisma.$transaction(async (tx) => {
-        await tx.$executeRaw`SELECT set_config('app.current_space_id', ${memberAPayload!.spaceId}, true)`;
-        const rows = await tx.$queryRaw<{ current_setting: string }[]>`SELECT current_setting('app.current_space_id')`;
-        return rows[0]!.current_setting;
+    // Exercise the real production RLS pipeline: TenantContext.run mirrors what
+    // TenantMiddleware does for a real request carrying this cookie's payload,
+    // and prisma.milestone.<op> (the extended client, NOT prisma.$transaction,
+    // which is deliberately rebound to the raw basePrisma.$transaction in
+    // packages/database/src/client.ts so manual transactions bypass this exact
+    // query extension) triggers the $allOperations hook that opens its own
+    // transaction and calls set_config('app.current_space_id', ...) for us.
+    // If TenantContext.currentSpaceId were unset, client.ts:38 fails closed by
+    // throwing 'TenantContext: no space set for Milestone.<op>' rather than
+    // silently running unscoped — that fail-closed behavior is what makes this
+    // positive-path assertion meaningful: a query that "just worked" wouldn't
+    // distinguish "RLS applied correctly" from "there's no guard at all".
+    await TenantContext.run(memberAPayload!.spaceId as string, () =>
+      prisma.milestone.create({
+        data: {
+          spaceId: memberAPayload!.spaceId as string,
+          title: 'RLS pipeline test milestone',
+          occurredAt: new Date(),
+        },
       }),
     );
-    expect(currentSettingForA).toBe(spaceARes.body.id);
-    expect(currentSettingForA).not.toBe(spaceCRes.body.id);
+
+    const milestonesVisibleFromA = await TenantContext.run(memberAPayload!.spaceId as string, () =>
+      prisma.milestone.findMany(),
+    );
+    expect(milestonesVisibleFromA).toHaveLength(1);
+    expect(milestonesVisibleFromA[0]!.title).toBe('RLS pipeline test milestone');
+
+    // Prove isolation: Space C has no milestones, and querying scoped to it
+    // via TenantContext.run must return empty — proving RLS actually filters
+    // by app.current_space_id at the database level, not just that the app
+    // happens to pass the right spaceId as a query filter.
+    const milestonesVisibleFromC = await TenantContext.run(spaceCRes.body.id as string, () =>
+      prisma.milestone.findMany(),
+    );
+    expect(milestonesVisibleFromC).toEqual([]);
+
+    await TenantContext.run(memberAPayload!.spaceId as string, () =>
+      prisma.milestone.deleteMany({ where: { spaceId: memberAPayload!.spaceId as string } }),
+    );
   });
 });
