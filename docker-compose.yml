@@ -1,3 +1,10 @@
+# Canonical source for local Postgres dev credentials. If you change these,
+# also update (they can't read this file automatically): .env.example,
+# packages/database/.env.example, and the `env`/`services.postgres.env`
+# blocks in .github/workflows/ci.yml. The `us_os_app` role and its password
+# are created separately by a migration (see
+# packages/database/prisma/migrations/*_add_restricted_app_role) and must be
+# kept in sync the same way.
 services:
   postgres:
     image: postgres:16-alpine
