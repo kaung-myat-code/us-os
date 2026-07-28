@@ -9,14 +9,18 @@
     "db:migrate": "prisma migrate dev --skip-generate",
     "db:studio": "prisma studio",
     "db:seed": "tsx prisma/seed.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "jest"
   },
   "dependencies": {
     "@prisma/client": "^5.22.0"
   },
   "devDependencies": {
+    "@types/jest": "^29.5.14",
     "@types/node": "^22.9.0",
+    "jest": "^29.7.0",
     "prisma": "^5.22.0",
+    "ts-jest": "^29.2.5",
     "tsx": "^4.19.2",
     "typescript": "^5.6.3"
   }
