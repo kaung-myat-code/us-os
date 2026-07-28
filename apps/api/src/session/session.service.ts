@@ -3,6 +3,13 @@ import { JwtService } from '@nestjs/jwt';
 import { prisma } from '@us-os/database';
 import type { Response } from 'express';
 
+// Fail closed: a prod deploy with no JWT_SECRET set must not silently sign
+// sessions with the committed dev fallback below (anyone who reads this file
+// could forge a valid session token for any user/space).
+if (process.env.NODE_ENV === 'production' && !process.env.JWT_SECRET) {
+  throw new Error('JWT_SECRET must be set in production');
+}
+
 // Dev-only fallback so local/test runs work without extra env setup; set a
 // real JWT_SECRET in production.
 export const JWT_SECRET = process.env.JWT_SECRET ?? 'dev-secret-change-me-in-production';
