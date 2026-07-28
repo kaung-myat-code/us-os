@@ -1,0 +1,12 @@
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+// Domain models (Space, Milestone, Decision, Goal, Media, etc.) are added
+// per-feature in later phases. This file only wires the datasource/generator
+// so `prisma generate`/`migrate` work end to end for this foundation phase.
