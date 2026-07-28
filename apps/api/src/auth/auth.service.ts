@@ -18,7 +18,8 @@ export class AuthService {
     const passwordHash = await bcrypt.hash(dto.password, SALT_ROUNDS);
 
     if (!dto.pairingCode) {
-      return prisma.user.create({ data: { email: dto.email, passwordHash } });
+      const user = await prisma.user.create({ data: { email: dto.email, passwordHash } });
+      return { id: user.id, email: user.email, createdAt: user.createdAt };
     }
 
     // Combined register+redeem: one atomic transaction so an invalid code
@@ -42,7 +43,7 @@ export class AuthService {
         data: { redeemedAt: new Date(), redeemedByUserId: user.id },
       });
 
-      return user;
+      return { id: user.id, email: user.email, createdAt: user.createdAt };
     });
   }
 
