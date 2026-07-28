@@ -34,14 +34,38 @@ export class AuthService {
       if (code.redeemedAt) throw new GoneException('This pairing code has already been used');
       if (code.expiresAt < new Date()) throw new GoneException('This pairing code has expired');
 
+      // Atomic compare-and-set FIRST: this is the actual race-closer. Postgres
+      // takes a row-level lock on the target PairingCode row for the duration
+      // of this UPDATE. A concurrent redeemer's identical UPDATE blocks until
+      // this transaction commits or rolls back, then re-evaluates the WHERE
+      // clause (redeemedAt: null) under READ COMMITTED against the now-committed
+      // row, sees redeemedAt is no longer null, and affects 0 rows. That makes
+      // "count === 0" a deterministic, race-safe signal that someone else won.
+      // Mirrors the fix in SpacesService.redeemPairingCode.
+      //
+      // Deliberately ordered before the memberCount check below: if memberCount
+      // were checked first, both concurrent transactions could read
+      // memberCount < 2 before either commits (READ COMMITTED does not lock on
+      // plain SELECTs), so the loser would inconsistently surface as either
+      // GoneException or ConflictException depending on timing. Gating on the
+      // atomic updateMany first guarantees the loser always sees GoneException.
+      // If this throws, the whole transaction (including the User row created
+      // above) rolls back, so no orphaned user is left behind.
+      const { count } = await tx.pairingCode.updateMany({
+        where: { id: code.id, redeemedAt: null },
+        data: { redeemedAt: new Date(), redeemedByUserId: user.id },
+      });
+      if (count === 0) {
+        throw new GoneException('This pairing code has already been used');
+      }
+
+      // Still useful as a capacity guard (and the transaction rollback undoes
+      // the updateMany above if it fires), but on its own it is not a
+      // sufficient concurrency guard — see the updateMany comment above.
       const memberCount = await tx.spaceMembership.count({ where: { spaceId: code.spaceId } });
       if (memberCount >= 2) throw new ConflictException('This Space is already full');
 
       await tx.spaceMembership.create({ data: { userId: user.id, spaceId: code.spaceId, role: 'member' } });
-      await tx.pairingCode.update({
-        where: { id: code.id },
-        data: { redeemedAt: new Date(), redeemedByUserId: user.id },
-      });
 
       return { id: user.id, email: user.email, createdAt: user.createdAt };
     });

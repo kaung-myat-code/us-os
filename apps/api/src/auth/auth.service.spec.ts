@@ -72,6 +72,42 @@ describe('AuthService (integration)', () => {
       expect(await prisma.user.findUnique({ where: { email } })).toBeNull();
     });
 
+    it('closes the double-redemption race: two new users registering concurrently with the same valid code, only one succeeds and the Space ends up with exactly 2 members', async () => {
+      const creator = await authService.register({ email: uniqueEmail('race-creator'), password: 'supersecret' });
+      createdUserIds.push(creator.id);
+      const space = await prisma.space.create({ data: { name: 'Register Race Space' } });
+      createdSpaceIds.push(space.id);
+      await prisma.spaceMembership.create({ data: { userId: creator.id, spaceId: space.id, role: 'creator' } });
+      await prisma.pairingCode.create({
+        data: { spaceId: space.id, code: 'RACE0001', expiresAt: new Date(Date.now() + 60_000) },
+      });
+
+      const emailA = uniqueEmail('race-joiner-a');
+      const emailB = uniqueEmail('race-joiner-b');
+
+      const results = await Promise.allSettled([
+        authService.register({ email: emailA, password: 'supersecret', pairingCode: 'RACE0001' }),
+        authService.register({ email: emailB, password: 'supersecret', pairingCode: 'RACE0001' }),
+      ]);
+
+      const fulfilled = results.filter((r) => r.status === 'fulfilled');
+      const rejected = results.filter((r) => r.status === 'rejected');
+      expect(fulfilled).toHaveLength(1);
+      expect(rejected).toHaveLength(1);
+      expect((rejected[0] as PromiseRejectedResult).reason).toBeInstanceOf(GoneException);
+
+      const winnerEmail = (fulfilled[0] as PromiseFulfilledResult<{ id: string; email: string }>).value.email;
+      const winner = await prisma.user.findUniqueOrThrow({ where: { email: winnerEmail } });
+      createdUserIds.push(winner.id);
+
+      // The loser's whole transaction must roll back, including its User row.
+      const loserEmail = winnerEmail === emailA ? emailB : emailA;
+      expect(await prisma.user.findUnique({ where: { email: loserEmail } })).toBeNull();
+
+      const memberCount = await prisma.spaceMembership.count({ where: { spaceId: space.id } });
+      expect(memberCount).toBe(2);
+    });
+
     it('rejects an already-redeemed pairing code with 410, rolling back registration', async () => {
       const creator = await authService.register({ email: uniqueEmail('creator2'), password: 'supersecret' });
       createdUserIds.push(creator.id);
