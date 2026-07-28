@@ -37,16 +37,32 @@ pnpm --filter @us-os/api add passport passport-local passport-jwt @nestjs/passpo
 pnpm --filter @us-os/api add -D @types/passport-local @types/passport-jwt @types/bcrypt @types/cookie-parser
 ```
 
-- [ ] **Step 2: Verify install**
+- [ ] **Step 2: Force test files to run sequentially**
+
+Every integration test in this plan calls `await prisma.$disconnect()` in its own `afterAll`. Jest runs separate test *files* in parallel worker processes by default; one file's `$disconnect()` can tear down the shared connection while another file is mid-query against the same real Postgres instance, causing flaky cross-file failures. `--runInBand` makes Jest run all test files in a single process, one after another — the simplest fix given every spec file already manages its own connection lifecycle independently.
+
+Read `apps/api/package.json` first, then update its `test` script:
+
+```json
+{
+  "scripts": {
+    "test": "jest --runInBand"
+  }
+}
+```
+
+(Only the `test` script line changes — leave every other script as-is.)
+
+- [ ] **Step 3: Verify install**
 
 Run: `pnpm --filter @us-os/api typecheck`
 Expected: passes (no source changes yet, just confirms the workspace resolves cleanly after the lockfile update).
 
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add apps/api/package.json pnpm-lock.yaml
-git commit -m "chore(api): add passport, jwt, bcrypt, cookie-parser dependencies"
+git commit -m "chore(api): add passport, jwt, bcrypt, cookie-parser dependencies; run tests in-band"
 ```
 
 ---
@@ -1421,6 +1437,7 @@ import { prisma } from '@us-os/database';
 import request from 'supertest';
 import { AuthModule } from './auth.module';
 import { SessionModule } from '../session/session.module';
+import { HttpExceptionFilter } from '../common/http-exception.filter';
 
 describe('AuthController (integration)', () => {
   let app: INestApplication;
@@ -1429,6 +1446,7 @@ describe('AuthController (integration)', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [SessionModule, AuthModule] }).compile();
     app = moduleRef.createNestApplication();
+    app.useGlobalFilters(new HttpExceptionFilter());
     await app.init();
   });
 
@@ -1475,7 +1493,7 @@ describe('AuthController (integration)', () => {
 
     const res = await request(app.getHttpServer()).post('/auth/login').send({ email, password: 'supersecret' });
 
-    expect(res.status).toBe(201);
+    expect(res.status).toBe(200);
     expect(res.headers['set-cookie']?.[0]).toContain('us_os_session=');
   });
 
@@ -1515,7 +1533,7 @@ describe('AuthController (integration)', () => {
     const cookie = registerRes.headers['set-cookie'];
 
     const logoutRes = await request(app.getHttpServer()).post('/auth/logout').set('Cookie', cookie);
-    expect(logoutRes.status).toBe(201);
+    expect(logoutRes.status).toBe(200);
     expect(logoutRes.headers['set-cookie']?.[0]).toMatch(/us_os_session=;/);
 
     const meRes = await request(app.getHttpServer()).get('/auth/me').set('Cookie', cookie);
@@ -1535,7 +1553,7 @@ Expected: FAIL (module not found)
 
 ```typescript
 // apps/api/src/auth/auth.controller.ts
-import { Body, Controller, Get, Post, Req, Res, UseGuards, UsePipes } from '@nestjs/common';
+import { Body, Controller, Get, HttpCode, Post, Req, Res, UseGuards, UsePipes } from '@nestjs/common';
 import { LoginRequestSchema, RegisterRequestSchema, type LoginRequest, type RegisterRequest } from '@us-os/shared-types';
 import type { Request, Response } from 'express';
 import { createZodValidationPipe } from '../common/zod-validation.pipe';
@@ -1562,6 +1580,7 @@ export class AuthController {
 
   @UseGuards(LocalAuthGuard)
   @Post('login')
+  @HttpCode(200)
   @UsePipes(createZodValidationPipe(LoginRequestSchema))
   async login(@Req() req: Request, @Res({ passthrough: true }) res: Response, @Body() _dto: LoginRequest) {
     const { userId } = req.user as AuthenticatedUser;
@@ -1570,6 +1589,7 @@ export class AuthController {
   }
 
   @Post('logout')
+  @HttpCode(200)
   logout(@Res({ passthrough: true }) res: Response) {
     this.sessionService.clearSessionCookie(res);
     return { success: true };
@@ -1962,6 +1982,7 @@ import request from 'supertest';
 import { AuthModule } from '../auth/auth.module';
 import { SessionModule } from '../session/session.module';
 import { SpacesModule } from './spaces.module';
+import { HttpExceptionFilter } from '../common/http-exception.filter';
 
 describe('SpacesController (integration)', () => {
   let app: INestApplication;
@@ -1970,6 +1991,7 @@ describe('SpacesController (integration)', () => {
   beforeAll(async () => {
     const moduleRef = await Test.createTestingModule({ imports: [SessionModule, AuthModule, SpacesModule] }).compile();
     app = moduleRef.createNestApplication();
+    app.useGlobalFilters(new HttpExceptionFilter());
     await app.init();
   });
 
@@ -2164,6 +2186,7 @@ import { AuthModule } from '../auth/auth.module';
 import { SessionModule } from '../session/session.module';
 import { SessionService } from '../session/session.service';
 import { SpacesModule } from '../spaces/spaces.module';
+import { HttpExceptionFilter } from '../common/http-exception.filter';
 
 describe('Tenant context integration (RLS pipeline + JWT payload)', () => {
   let app: INestApplication;
@@ -2174,6 +2197,7 @@ describe('Tenant context integration (RLS pipeline + JWT payload)', () => {
     const moduleRef = await Test.createTestingModule({ imports: [SessionModule, AuthModule, SpacesModule] }).compile();
     app = moduleRef.createNestApplication();
     app.use(require('cookie-parser')());
+    app.useGlobalFilters(new HttpExceptionFilter());
     await app.init();
     sessionService = moduleRef.get(SessionService);
   });
@@ -2310,11 +2334,21 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
     headers: { 'Content-Type': 'application/json', ...init?.headers },
   });
 
-  const body = await res.json();
   if (!res.ok) {
-    throw new Error(body.detail ?? 'Request failed');
+    // Error responses are usually RFC 7807 JSON, but a CORS rejection, proxy
+    // error, or dev-server crash can return an empty/HTML body instead —
+    // don't let res.json() throw a confusing SyntaxError in that case.
+    let detail = 'Request failed';
+    try {
+      const body = await res.json();
+      detail = body.detail ?? detail;
+    } catch {
+      // non-JSON error response, fall back to the generic message
+    }
+    throw new Error(detail);
   }
-  return body as T;
+
+  return res.json() as Promise<T>;
 }
 ```
 
