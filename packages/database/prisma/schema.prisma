@@ -13,9 +13,51 @@ model Space {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  milestones Milestone[]
+  milestones  Milestone[]
+  memberships SpaceMembership[]
+  pairingCodes PairingCode[]
 
   @@map("spaces")
+}
+
+model User {
+  id           String   @id @default(uuid()) @db.Uuid
+  email        String   @unique
+  passwordHash String   @map("password_hash")
+  createdAt    DateTime @default(now()) @map("created_at")
+  updatedAt    DateTime @updatedAt @map("updated_at")
+
+  memberships SpaceMembership[]
+
+  @@map("users")
+}
+
+model SpaceMembership {
+  id       String   @id @default(uuid()) @db.Uuid
+  userId   String   @unique @map("user_id") @db.Uuid
+  spaceId  String   @map("space_id") @db.Uuid
+  role     String
+  joinedAt DateTime @default(now()) @map("joined_at")
+
+  user  User  @relation(fields: [userId], references: [id], onDelete: Cascade)
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@index([spaceId])
+  @@map("space_memberships")
+}
+
+model PairingCode {
+  id               String    @id @default(uuid()) @db.Uuid
+  spaceId          String    @map("space_id") @db.Uuid
+  code             String    @unique
+  expiresAt        DateTime  @map("expires_at")
+  redeemedAt       DateTime? @map("redeemed_at")
+  redeemedByUserId String?   @map("redeemed_by_user_id") @db.Uuid
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@index([spaceId])
+  @@map("pairing_codes")
 }
 
 model Milestone {
