@@ -24,6 +24,10 @@ jobs:
     runs-on: ubuntu-latest
     timeout-minutes: 15
 
+    # Credentials below must match docker-compose.yml (the canonical source for
+    # local dev) and .env.example / packages/database/.env.example. GitHub
+    # Actions service containers can't read those files at job setup, so these
+    # have to stay literal here — keep them in sync by hand.
     env:
       # us_os is a superuser bootstrap role, reserved for `prisma migrate`/`generate`.
       # us_os_app is a non-superuser, NOBYPASSRLS role the app/tests connect as, so
