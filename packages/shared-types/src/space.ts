@@ -15,3 +15,10 @@ export const RedeemPairingCodeRequestSchema = z.object({
   code: z.string().length(8),
 });
 export type RedeemPairingCodeRequest = z.infer<typeof RedeemPairingCodeRequestSchema>;
+
+export interface Space {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+}
