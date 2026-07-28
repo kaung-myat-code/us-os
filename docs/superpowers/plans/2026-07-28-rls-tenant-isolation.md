@@ -1,6 +1,6 @@
 # RLS Tenant Isolation Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [x]`) syntax for tracking.
 
 **Goal:** Enforce Postgres Row-Level Security keyed on `space_id` for every query against tenant-scoped models, with the tenant set via `set_config('app.current_space_id', ...)` inside the same transaction as the query, so a missing or wrong tenant context fails closed instead of leaking cross-tenant data.
 
@@ -28,7 +28,7 @@
 **Interfaces:**
 - Produces: Prisma models `Space` (`id: string`, `name: string`, `createdAt`, `updatedAt`, `milestones: Milestone[]`) and `Milestone` (`id: string`, `spaceId: string`, `title: string`, `occurredAt: Date`, `createdAt`, `updatedAt`), both with `@db.Uuid` on `id`/`spaceId`. Postgres tables `spaces`, `milestones`, with `milestones` under `FORCE ROW LEVEL SECURITY` and a `tenant_isolation` policy filtering/validating on `current_setting('app.current_space_id', ...)`.
 
-- [ ] **Step 1: Write the schema models**
+- [x] **Step 1: Write the schema models**
 
 Replace the contents of `packages/database/prisma/schema.prisma` with:
 
@@ -70,7 +70,7 @@ model Milestone {
 
 `onDelete: Cascade` means deleting a `Space` deletes its `Milestone` rows — needed so Task 4's integration tests can clean up by deleting the spaces they create.
 
-- [ ] **Step 2: Generate the migration**
+- [x] **Step 2: Generate the migration**
 
 Ensure Postgres is running (`docker-compose up -d postgres` from the repo root), then run:
 
@@ -80,7 +80,7 @@ pnpm --filter @us-os/database db:migrate
 
 When prompted for a migration name, enter `add_space_and_milestone`. This creates `packages/database/prisma/migrations/<timestamp>_add_space_and_milestone/migration.sql` containing the `CREATE TABLE` statements for `spaces` and `milestones`.
 
-- [ ] **Step 3: Hand-append the RLS policy SQL**
+- [x] **Step 3: Hand-append the RLS policy SQL**
 
 Open the generated `migration.sql` file and append this to the end (after the generated `CREATE TABLE`/`CREATE INDEX`/`ALTER TABLE ... FOREIGN KEY` statements — do not remove anything Prisma generated):
 
@@ -94,7 +94,7 @@ CREATE POLICY tenant_isolation ON "milestones"
   WITH CHECK (space_id = nullif(current_setting('app.current_space_id', true), '')::uuid);
 ```
 
-- [ ] **Step 4: Apply and verify the migration**
+- [x] **Step 4: Apply and verify the migration**
 
 ```bash
 pnpm --filter @us-os/database db:generate
@@ -108,7 +108,7 @@ docker exec -it us-os-postgres psql -U us_os -d us_os_dev -c "\d+ milestones"
 
 Expected: output includes `Policies:` with a `tenant_isolation` entry, and `Row security: yes, forced`.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/database/prisma/schema.prisma packages/database/prisma/migrations
@@ -126,7 +126,7 @@ git commit -m "Add Space and Milestone models with RLS tenant isolation policy"
 **Interfaces:**
 - Produces: `pnpm --filter @us-os/database test` runs Jest over `*.spec.ts`/`*.test.ts` files under `packages/database/src` and `packages/database/test`, using `ts-jest`. This is what Tasks 3 and 4 rely on to run their test files.
 
-- [ ] **Step 1: Add test dependencies and script**
+- [x] **Step 1: Add test dependencies and script**
 
 Edit `packages/database/package.json`, adding a `"test": "jest"` script and these devDependencies (matching versions already used in `apps/api/package.json`):
 
@@ -162,7 +162,7 @@ Edit `packages/database/package.json`, adding a `"test": "jest"` script and thes
 
 Remove the now-stale `"db:generate": "prisma generate --allow-no-models"` comment concern: keep `--allow-no-models` as-is, it's harmless once models exist.
 
-- [ ] **Step 2: Add the Jest config**
+- [x] **Step 2: Add the Jest config**
 
 Create `packages/database/jest.config.js`:
 
@@ -179,7 +179,7 @@ module.exports = {
 };
 ```
 
-- [ ] **Step 3: Install and verify**
+- [x] **Step 3: Install and verify**
 
 ```bash
 pnpm install
@@ -188,7 +188,7 @@ pnpm --filter @us-os/database test
 
 Expected: Jest runs and reports "No tests found" (no test files exist yet) — this confirms the runner is wired correctly, not a failure.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/database/package.json packages/database/jest.config.js pnpm-lock.yaml
@@ -207,7 +207,7 @@ git commit -m "Add Jest test tooling to packages/database"
 - Consumes: nothing (pure Node.js, no Prisma dependency at runtime except the `Prisma.TransactionClient` type import).
 - Produces: `TenantContext.run<T>(spaceId: string, fn: () => T): T`, `TenantContext.spaceId: string` (throws if unset), `TenantContext.currentSpaceId: string | undefined`, `TenantContext.activeTx: Prisma.TransactionClient | undefined`, `TenantContext.runWithTx<T>(tx: Prisma.TransactionClient, fn: () => T): T` (throws if no space context is active). Task 4's Prisma extension and Task 5's NestJS middleware both import `TenantContext` from this file.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `packages/database/src/tenant-context.spec.ts`:
 
@@ -274,7 +274,7 @@ describe('TenantContext', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 ```bash
 pnpm --filter @us-os/database test tenant-context
@@ -282,7 +282,7 @@ pnpm --filter @us-os/database test tenant-context
 
 Expected: FAIL with "Cannot find module './tenant-context'".
 
-- [ ] **Step 3: Implement TenantContext**
+- [x] **Step 3: Implement TenantContext**
 
 Create `packages/database/src/tenant-context.ts`:
 
@@ -321,7 +321,7 @@ export const TenantContext = {
 };
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 ```bash
 pnpm --filter @us-os/database test tenant-context
@@ -329,7 +329,7 @@ pnpm --filter @us-os/database test tenant-context
 
 Expected: PASS, all 6 tests green.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/database/src/tenant-context.ts packages/database/src/tenant-context.spec.ts
@@ -349,7 +349,7 @@ git commit -m "Add AsyncLocalStorage-based TenantContext"
 - Consumes: `TenantContext` from `./tenant-context` (Task 3).
 - Produces: `prisma` (the extended client — same export name and shape as before, so no existing import sites break), `withTenantTransaction<T>(fn: (tx: Prisma.TransactionClient) => Promise<T>): Promise<T>`. Task 5's middleware and any future service code call `TenantContext.run(...)` before using `prisma`, or call `withTenantTransaction(...)` directly for multi-model atomic writes.
 
-- [ ] **Step 1: Write the failing integration tests**
+- [x] **Step 1: Write the failing integration tests**
 
 Create `packages/database/test/rls.integration.test.ts`. These run against the real docker-compose Postgres (`docker-compose up -d postgres` must be running).
 
@@ -438,7 +438,7 @@ describe('RLS tenant isolation (integration)', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 ```bash
 docker-compose up -d postgres
@@ -447,7 +447,7 @@ pnpm --filter @us-os/database test rls.integration
 
 Expected: FAIL with "prisma.milestone is undefined" or similar — the extension doesn't exist yet.
 
-- [ ] **Step 3: Implement the Prisma Client Extension**
+- [x] **Step 3: Implement the Prisma Client Extension**
 
 Replace the contents of `packages/database/src/client.ts`:
 
@@ -502,7 +502,7 @@ export async function withTenantTransaction<T>(
 
 Note the `globalForPrisma` pattern now tracks `basePrisma` (the un-extended client) instead of the old `prisma` global — this preserves the original file's dev-mode hot-reload behavior (avoiding multiple `PrismaClient` instances) while `prisma` itself is now the derived, extended client rather than the thing cached across reloads.
 
-- [ ] **Step 4: Export withTenantTransaction from the package**
+- [x] **Step 4: Export withTenantTransaction from the package**
 
 Update `packages/database/src/index.ts`:
 
@@ -511,7 +511,7 @@ export * from './client';
 export * from './tenant-context';
 ```
 
-- [ ] **Step 5: Run the tests to verify they pass**
+- [x] **Step 5: Run the tests to verify they pass**
 
 ```bash
 docker-compose up -d postgres
@@ -521,7 +521,7 @@ pnpm --filter @us-os/database test rls.integration
 
 Expected: PASS, all 5 tests green.
 
-- [ ] **Step 6: Run the full package test suite**
+- [x] **Step 6: Run the full package test suite**
 
 ```bash
 pnpm --filter @us-os/database test
@@ -529,7 +529,7 @@ pnpm --filter @us-os/database test
 
 Expected: PASS (Task 3's `tenant-context.spec.ts` plus this task's `rls.integration.test.ts`, 11 tests total).
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add packages/database/src/client.ts packages/database/src/index.ts packages/database/test/rls.integration.test.ts
@@ -549,11 +549,11 @@ git commit -m "Add Prisma extension enforcing RLS tenant isolation via set_confi
 - Consumes: `TenantContext` from `@us-os/database` (Task 3/4).
 - Produces: `TenantMiddleware` (a `NestMiddleware`), which Task 6 wires into `AppModule`.
 
-- [ ] **Step 1: Add the workspace dependency**
+- [x] **Step 1: Add the workspace dependency**
 
 Edit `apps/api/package.json`, adding `"@us-os/database": "workspace:*"` alongside the existing `"@us-os/shared-types": "workspace:*"` in `dependencies`.
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 Create `apps/api/src/tenant/tenant.middleware.spec.ts`:
 
@@ -601,7 +601,7 @@ describe('TenantMiddleware', () => {
 });
 ```
 
-- [ ] **Step 3: Run the test to verify it fails**
+- [x] **Step 3: Run the test to verify it fails**
 
 ```bash
 pnpm --filter @us-os/api test tenant.middleware
@@ -609,7 +609,7 @@ pnpm --filter @us-os/api test tenant.middleware
 
 Expected: FAIL with "Cannot find module './tenant.middleware'".
 
-- [ ] **Step 4: Implement TenantMiddleware**
+- [x] **Step 4: Implement TenantMiddleware**
 
 Create `apps/api/src/tenant/tenant.middleware.ts`:
 
@@ -636,7 +636,7 @@ export class TenantMiddleware implements NestMiddleware {
 }
 ```
 
-- [ ] **Step 5: Install and run the test to verify it passes**
+- [x] **Step 5: Install and run the test to verify it passes**
 
 ```bash
 pnpm install
@@ -645,7 +645,7 @@ pnpm --filter @us-os/api test tenant.middleware
 
 Expected: PASS, both tests green.
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/package.json apps/api/src/tenant/tenant.middleware.ts apps/api/src/tenant/tenant.middleware.spec.ts pnpm-lock.yaml
@@ -664,7 +664,7 @@ git commit -m "Add TenantMiddleware populating TenantContext from x-space-id hea
 - Consumes: `TenantMiddleware` (Task 5).
 - Produces: every route except `/health` requires `x-space-id`; `/health` remains unauthenticated so container health checks keep working without a tenant header.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 Create `apps/api/src/app.module.spec.ts`:
 
@@ -696,7 +696,7 @@ describe('AppModule tenant middleware wiring', () => {
 
 This test only proves `/health` stays exempt (the observable, testable contract of this task without needing a tenant-scoped route to exist yet — none does, per Task 1's scope).
 
-- [ ] **Step 2: Run the test to verify it fails**
+- [x] **Step 2: Run the test to verify it fails**
 
 ```bash
 pnpm --filter @us-os/api test app.module
@@ -704,7 +704,7 @@ pnpm --filter @us-os/api test app.module
 
 Expected: currently PASSES already (no middleware applied yet, so `/health` already returns 200) — this is expected; the meaningful failure mode this task guards against is a future regression where middleware gets applied globally without excluding `/health`. Confirm the test runs and passes as a baseline before proceeding.
 
-- [ ] **Step 3: Wire the middleware, excluding /health**
+- [x] **Step 3: Wire the middleware, excluding /health**
 
 Replace the contents of `apps/api/src/app.module.ts`:
 
@@ -725,7 +725,7 @@ export class AppModule implements NestModule {
 }
 ```
 
-- [ ] **Step 4: Run the test to verify it still passes**
+- [x] **Step 4: Run the test to verify it still passes**
 
 ```bash
 pnpm --filter @us-os/api test app.module
@@ -733,7 +733,7 @@ pnpm --filter @us-os/api test app.module
 
 Expected: PASS — `/health` still returns 200 even with `TenantMiddleware` wired in, because it's excluded.
 
-- [ ] **Step 5: Run the full apps/api test suite**
+- [x] **Step 5: Run the full apps/api test suite**
 
 ```bash
 pnpm --filter @us-os/api test
@@ -741,7 +741,7 @@ pnpm --filter @us-os/api test
 
 Expected: PASS (health controller test, tenant middleware test, app module test — all green).
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/src/app.module.ts apps/api/src/app.module.spec.ts
