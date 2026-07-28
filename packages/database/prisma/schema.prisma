@@ -7,6 +7,27 @@ generator client {
   provider = "prisma-client-js"
 }
 
-// Domain models (Space, Milestone, Decision, Goal, Media, etc.) are added
-// per-feature in later phases. This file only wires the datasource/generator
-// so `prisma generate`/`migrate` work end to end for this foundation phase.
+model Space {
+  id        String   @id @default(uuid()) @db.Uuid
+  name      String
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  milestones Milestone[]
+
+  @@map("spaces")
+}
+
+model Milestone {
+  id         String   @id @default(uuid()) @db.Uuid
+  spaceId    String   @map("space_id") @db.Uuid
+  title      String
+  occurredAt DateTime @map("occurred_at")
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@index([spaceId])
+  @@map("milestones")
+}
