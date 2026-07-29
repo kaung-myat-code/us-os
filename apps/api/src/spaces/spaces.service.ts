@@ -1,14 +1,11 @@
 // apps/api/src/spaces/spaces.service.ts
 import { ConflictException, GoneException, Injectable, NotFoundException } from '@nestjs/common';
-import { Prisma, prisma, type Space } from '@us-os/database';
+import { prisma, type Space } from '@us-os/database';
+import { isUniqueConstraintError } from '../common/prisma-errors';
 import { generatePairingCodeString } from './pairing-code.util';
 
 const PAIRING_CODE_TTL_MS = 24 * 60 * 60 * 1000;
 const MAX_GENERATE_ATTEMPTS = 5;
-
-function isUniqueConstraintError(err: unknown): boolean {
-  return err instanceof Prisma.PrismaClientKnownRequestError && err.code === 'P2002';
-}
 
 @Injectable()
 export class SpacesService {
@@ -16,11 +13,21 @@ export class SpacesService {
     const existing = await prisma.spaceMembership.findUnique({ where: { userId } });
     if (existing) throw new ConflictException("You're already part of a Space");
 
-    return prisma.$transaction(async (tx) => {
-      const space = await tx.space.create({ data: { name } });
-      await tx.spaceMembership.create({ data: { userId, spaceId: space.id, role: 'creator' } });
-      return space;
-    });
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const space = await tx.space.create({ data: { name } });
+        await tx.spaceMembership.create({ data: { userId, spaceId: space.id, role: 'creator' } });
+        return space;
+      });
+    } catch (err) {
+      // Pre-check above is TOCTOU-racy: two concurrent createSpace calls for
+      // the same userId can both pass it before either inserts. The
+      // SpaceMembership.userId unique constraint stops the second insert at
+      // the DB, but without this catch it would surface as a raw 500 instead
+      // of the same 409 the pre-check gives non-racing callers.
+      if (isUniqueConstraintError(err)) throw new ConflictException("You're already part of a Space");
+      throw err;
+    }
   }
 
   async generatePairingCode(userId: string): Promise<{ code: string; expiresAt: Date }> {
