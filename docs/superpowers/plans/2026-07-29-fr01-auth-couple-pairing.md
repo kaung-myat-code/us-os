@@ -28,7 +28,7 @@
 **Interfaces:**
 - Produces: `passport`, `passport-local`, `passport-jwt`, `@nestjs/passport`, `@nestjs/jwt`, `bcrypt`, `cookie-parser` available as imports in later tasks.
 
-- [ ] **Step 1: Install the packages**
+- [x] **Step 1: Install the packages**
 
 Run from the repo root:
 
@@ -37,7 +37,7 @@ pnpm --filter @us-os/api add passport passport-local passport-jwt @nestjs/passpo
 pnpm --filter @us-os/api add -D @types/passport-local @types/passport-jwt @types/bcrypt @types/cookie-parser
 ```
 
-- [ ] **Step 2: Force test files to run sequentially**
+- [x] **Step 2: Force test files to run sequentially**
 
 Every integration test in this plan calls `await prisma.$disconnect()` in its own `afterAll`. Jest runs separate test *files* in parallel worker processes by default; one file's `$disconnect()` can tear down the shared connection while another file is mid-query against the same real Postgres instance, causing flaky cross-file failures. `--runInBand` makes Jest run all test files in a single process, one after another — the simplest fix given every spec file already manages its own connection lifecycle independently.
 
@@ -53,12 +53,12 @@ Read `apps/api/package.json` first, then update its `test` script:
 
 (Only the `test` script line changes — leave every other script as-is.)
 
-- [ ] **Step 3: Verify install**
+- [x] **Step 3: Verify install**
 
 Run: `pnpm --filter @us-os/api typecheck`
 Expected: passes (no source changes yet, just confirms the workspace resolves cleanly after the lockfile update).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/package.json pnpm-lock.yaml
@@ -77,7 +77,7 @@ git commit -m "chore(api): add passport, jwt, bcrypt, cookie-parser dependencies
 **Interfaces:**
 - Produces: `HttpExceptionFilter` (Nest `ExceptionFilter`), registered globally in `main.ts` via `app.useGlobalFilters(new HttpExceptionFilter())`. Every later controller can throw plain Nest `HttpException` subclasses (`ConflictException`, `NotFoundException`, `GoneException`, `UnauthorizedException`, `ForbiddenException`, `BadRequestException`) and get an RFC 7807 body automatically.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // apps/api/src/common/http-exception.filter.spec.ts
@@ -108,12 +108,12 @@ describe('HttpExceptionFilter', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pnpm --filter @us-os/api test -- http-exception.filter`
 Expected: FAIL (`http-exception.filter` module not found)
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // apps/api/src/common/http-exception.filter.ts
@@ -148,12 +148,12 @@ export class HttpExceptionFilter implements ExceptionFilter {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pnpm --filter @us-os/api test -- http-exception.filter`
 Expected: PASS
 
-- [ ] **Step 5: Wire the filter into the app and enable cookie-aware CORS**
+- [x] **Step 5: Wire the filter into the app and enable cookie-aware CORS**
 
 Read `apps/api/src/main.ts` first, then replace its contents:
 
@@ -179,12 +179,12 @@ bootstrap();
 
 `credentials: true` plus an explicit `origin` (not `*`) is required for the browser to send/receive the httpOnly session cookie cross-port in dev (web on 3000, api on 3001).
 
-- [ ] **Step 6: Confirm typecheck still passes**
+- [x] **Step 6: Confirm typecheck still passes**
 
 Run: `pnpm --filter @us-os/api typecheck`
 Expected: passes
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/common apps/api/src/main.ts
@@ -203,7 +203,7 @@ git commit -m "feat(api): add RFC 7807 exception filter and cookie-aware CORS"
 - Consumes: any `ZodSchema` from `@us-os/shared-types` (added in Task 4).
 - Produces: `createZodValidationPipe(schema: ZodSchema): PipeTransform`, used via `@UsePipes(createZodValidationPipe(SomeSchema))` on controller routes in later tasks. Throws `BadRequestException` (message = joined Zod issue messages) on invalid input — the filter from Task 2 turns that into a `400` RFC 7807 response.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // apps/api/src/common/zod-validation.pipe.spec.ts
@@ -228,12 +228,12 @@ describe('createZodValidationPipe', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pnpm --filter @us-os/api test -- zod-validation.pipe`
 Expected: FAIL (module not found)
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // apps/api/src/common/zod-validation.pipe.ts
@@ -255,12 +255,12 @@ export function createZodValidationPipe(schema: ZodSchema): PipeTransform {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pnpm --filter @us-os/api test -- zod-validation.pipe`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/common/zod-validation.pipe.ts apps/api/src/common/zod-validation.pipe.spec.ts
@@ -281,7 +281,7 @@ git commit -m "feat(api): add Zod validation pipe for shared DTO schemas"
 **Interfaces:**
 - Produces: `RegisterRequestSchema`, `RegisterRequest`, `LoginRequestSchema`, `LoginRequest`, `UserProfileSchema`, `UserProfile`, `AuthMeResponseSchema`, `AuthMeResponse`, `CreateSpaceRequestSchema`, `CreateSpaceRequest`, `PairingCodeResponseSchema`, `PairingCodeResponse`, `RedeemPairingCodeRequestSchema`, `RedeemPairingCodeRequest` — consumed by `apps/api` controllers (Tasks 11, 13) and `apps/web` forms (Task 15).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```typescript
 // packages/shared-types/src/auth.test.ts
@@ -379,12 +379,12 @@ describe('RedeemPairingCodeRequestSchema', () => {
 });
 ```
 
-- [ ] **Step 2: Run tests to verify they fail**
+- [x] **Step 2: Run tests to verify they fail**
 
 Run: `pnpm --filter @us-os/shared-types test`
 Expected: FAIL (`./auth` and `./space` modules not found)
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // packages/shared-types/src/auth.ts
@@ -454,12 +454,12 @@ export * from './auth';
 export * from './space';
 ```
 
-- [ ] **Step 4: Run tests to verify they pass**
+- [x] **Step 4: Run tests to verify they pass**
 
 Run: `pnpm --filter @us-os/shared-types test`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/shared-types/src
@@ -477,7 +477,7 @@ git commit -m "feat(shared-types): add auth and space DTO schemas"
 **Interfaces:**
 - Produces: `prisma.user`, `prisma.spaceMembership`, `prisma.pairingCode` model delegates on the `@us-os/database` `prisma` export (none are tenant-scoped, so they're called directly without `TenantContext`, same as `prisma.space` today). Consumed by every service task from here on.
 
-- [ ] **Step 1: Edit the schema**
+- [x] **Step 1: Edit the schema**
 
 Read `packages/database/prisma/schema.prisma` first, then add these models (and the two back-relation fields on `Space`):
 
@@ -538,17 +538,17 @@ model PairingCode {
 
 `userId @unique` on `SpaceMembership` is both the natural FK to look up "this user's one membership" and the DB-level backstop for "at most one Space per user" — no raw SQL needed, Prisma emits a plain unique index. None of these three models are RLS-scoped (no `space_id`-keyed row filtering needed on `users`, and `space_memberships`/`pairing_codes` are join/root tables like `spaces` itself), so no policy SQL is required either.
 
-- [ ] **Step 2: Generate the migration**
+- [x] **Step 2: Generate the migration**
 
 Run: `pnpm --filter @us-os/database exec prisma migrate dev --name add_auth_and_pairing`
 Expected: creates a new folder under `packages/database/prisma/migrations/`, applies it to your local dev DB, and regenerates the Prisma client.
 
-- [ ] **Step 3: Verify the client picks up the new models**
+- [x] **Step 3: Verify the client picks up the new models**
 
 Run: `pnpm --filter @us-os/database typecheck`
 Expected: passes
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add packages/database/prisma
@@ -572,7 +572,7 @@ git commit -m "feat(database): add User, SpaceMembership, PairingCode models"
   - `class SessionService { issueSessionCookie(res: Response, userId: string): Promise<void>; clearSessionCookie(res: Response): void; verify(token: string): { sub: string; spaceId: string | null } | null; }`
   - `SessionModule` — `@Global()`, exports `SessionService`. Imported once by `AppModule` (Task 8) so `TenantMiddleware` (a different module) can inject it.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // apps/api/src/session/session.service.spec.ts
@@ -656,12 +656,12 @@ describe('SessionService (integration)', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pnpm --filter @us-os/api test -- session.service`
 Expected: FAIL (module not found)
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // apps/api/src/session/session.service.ts
@@ -729,12 +729,12 @@ import { JWT_SECRET, SessionService } from './session.service';
 export class SessionModule {}
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pnpm --filter @us-os/api test -- session.service`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/session
@@ -755,7 +755,7 @@ git commit -m "feat(api): add SessionService for JWT-backed session cookies"
 - Consumes: `SessionService` from Task 6 (via Nest DI).
 - Produces: `TenantMiddleware` now takes `SessionService` in its constructor; behavior changes from "400 if `x-space-id` header missing" to "run `TenantContext` if a valid session cookie with a non-null `spaceId` is present, otherwise call `next()` with no `TenantContext`." This is a deliberate change from the RLS phase's placeholder: none of this phase's routes touch tenant-scoped models, and requiring a space before a user has even registered is nonsensical. Tenant-scoped model calls still fail closed (throw) if `TenantContext` was never set — that invariant from the RLS phase is untouched.
 
-- [ ] **Step 1: Update the middleware test first**
+- [x] **Step 1: Update the middleware test first**
 
 Read `apps/api/src/tenant/tenant.middleware.spec.ts`, then replace its contents:
 
@@ -829,12 +829,12 @@ describe('TenantMiddleware', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pnpm --filter @us-os/api test -- tenant.middleware`
 Expected: FAIL (`TenantMiddleware` constructor doesn't accept `SessionService` yet; old 400 behavior no longer matches)
 
-- [ ] **Step 3: Rewrite the middleware**
+- [x] **Step 3: Rewrite the middleware**
 
 ```typescript
 // apps/api/src/tenant/tenant.middleware.ts
@@ -862,12 +862,12 @@ export class TenantMiddleware implements NestMiddleware {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pnpm --filter @us-os/api test -- tenant.middleware`
 Expected: PASS
 
-- [ ] **Step 5: Register cookie-parser ahead of TenantMiddleware and wire SessionModule**
+- [x] **Step 5: Register cookie-parser ahead of TenantMiddleware and wire SessionModule**
 
 Read `apps/api/src/app.module.ts` first, then replace its contents. Cookie-parser must be applied as its own Nest middleware *before* `TenantMiddleware` in the same `configure()` method — Nest binds middlewares in the order `consumer.apply()` is called, and `TenantMiddleware` needs `req.cookies` to already be populated:
 
@@ -896,7 +896,7 @@ export class AppModule implements NestModule {
 
 Note: `AuthModule` (Task 11) and `SpacesModule` (Task 13) don't exist yet — this step's import will not compile until those tasks land. That's expected; this task's own test (Step 6 below) only exercises `/health`, which doesn't depend on those modules resolving business logic, but the module graph must still compile. **Reorder note for the executor:** apply this `app.module.ts` edit, but do not run the full `apps/api` test suite until Tasks 6, 9, 10, 12 are also in place — running `pnpm --filter @us-os/api test -- app.module` right after this step will fail to compile. Run only the two spec files touched in this task (`tenant.middleware.spec.ts`) until then, or reorder this step to the end after Tasks 9–13 if executing strictly task-by-task with full-suite verification at each step.
 
-- [ ] **Step 6: Update the app.module smoke test**
+- [x] **Step 6: Update the app.module smoke test**
 
 Read `apps/api/src/app.module.spec.ts` first — its existing assertion ("allows /health without an x-space-id header") is still true but the header is no longer meaningful; update the test name only:
 
@@ -927,7 +927,7 @@ describe('AppModule tenant middleware wiring', () => {
 });
 ```
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/tenant apps/api/src/app.module.ts apps/api/src/app.module.spec.ts
@@ -952,7 +952,7 @@ git commit -m "feat(api): derive tenant context from session cookie instead of x
 
 **Ordering note:** `LocalStrategy` depends on `AuthService`, which is built in Task 10. Do this task and Task 10 as one working unit if executing strictly task-by-task (or execute Task 10's `AuthService` shell first with `validateUser` stubbed, then return here) — under subagent-driven execution with a single reviewer gate spanning both, this is fine as ordered.
 
-- [ ] **Step 1: Write the type shared by both strategies**
+- [x] **Step 1: Write the type shared by both strategies**
 
 ```typescript
 // apps/api/src/auth/types.ts
@@ -962,7 +962,7 @@ export interface AuthenticatedUser {
 }
 ```
 
-- [ ] **Step 2: Write the failing test**
+- [x] **Step 2: Write the failing test**
 
 ```typescript
 // apps/api/src/auth/local.strategy.spec.ts
@@ -994,12 +994,12 @@ describe('LocalStrategy', () => {
 
 This test references `AuthService` from `./auth.service`, created in Task 10.
 
-- [ ] **Step 3: Run test to verify it fails**
+- [x] **Step 3: Run test to verify it fails**
 
 Run: `pnpm --filter @us-os/api test -- local.strategy`
 Expected: FAIL (`./auth.service` and `./local.strategy` not found)
 
-- [ ] **Step 4: Write the strategy and guard**
+- [x] **Step 4: Write the strategy and guard**
 
 ```typescript
 // apps/api/src/auth/local.strategy.ts
@@ -1034,12 +1034,12 @@ import { AuthGuard } from '@nestjs/passport';
 export class LocalAuthGuard extends AuthGuard('local') {}
 ```
 
-- [ ] **Step 5: Run test to verify it passes** (after Task 10's `AuthService` exists)
+- [x] **Step 5: Run test to verify it passes** (after Task 10's `AuthService` exists)
 
 Run: `pnpm --filter @us-os/api test -- local.strategy`
 Expected: PASS
 
-- [ ] **Step 6: Commit** (combine with Task 10's commit if done together)
+- [x] **Step 6: Commit** (combine with Task 10's commit if done together)
 
 ```bash
 git add apps/api/src/auth/local.strategy.ts apps/api/src/auth/local-auth.guard.ts apps/api/src/auth/local.strategy.spec.ts apps/api/src/auth/types.ts
@@ -1059,7 +1059,7 @@ git commit -m "feat(api): add Passport-Local strategy for email+password login"
 - Consumes: `JWT_SECRET`, `SessionPayload`, `SessionService.COOKIE_NAME` from `../session/session.service` (Task 6). `AuthenticatedUser` from `./types` (Task 8).
 - Produces: `JwtStrategy` (Passport strategy named `'jwt'`), `JwtAuthGuard extends AuthGuard('jwt')` — used to guard `GET /auth/me`, `POST /spaces`, `POST /spaces/pairing-codes`, `POST /spaces/pairing-codes/redeem`, `POST /auth/logout`.
 
-- [ ] **Step 1: Write the failing test**
+- [x] **Step 1: Write the failing test**
 
 ```typescript
 // apps/api/src/auth/jwt.strategy.spec.ts
@@ -1080,12 +1080,12 @@ describe('JwtStrategy', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pnpm --filter @us-os/api test -- jwt.strategy`
 Expected: FAIL (module not found)
 
-- [ ] **Step 3: Write the strategy and guard**
+- [x] **Step 3: Write the strategy and guard**
 
 ```typescript
 // apps/api/src/auth/jwt.strategy.ts
@@ -1124,12 +1124,12 @@ import { AuthGuard } from '@nestjs/passport';
 export class JwtAuthGuard extends AuthGuard('jwt') {}
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pnpm --filter @us-os/api test -- jwt.strategy`
 Expected: PASS
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/auth/jwt.strategy.ts apps/api/src/auth/jwt-auth.guard.ts apps/api/src/auth/jwt.strategy.spec.ts
@@ -1150,7 +1150,7 @@ git commit -m "feat(api): add Passport-JWT strategy for cookie-based route guard
   - `class AuthService { register(dto: RegisterRequest): Promise<{ id: string; email: string; createdAt: Date }>; validateUser(email: string, password: string): Promise<{ userId: string }>; getMe(userId: string): Promise<AuthMeResponse>; }`
   - Consumed by `LocalStrategy` (Task 8), `AuthController` (Task 11).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 ```typescript
 // apps/api/src/auth/auth.service.spec.ts
@@ -1305,12 +1305,12 @@ describe('AuthService (integration)', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pnpm --filter @us-os/api test -- auth.service`
 Expected: FAIL (module not found)
 
-- [ ] **Step 3: Write the implementation**
+- [x] **Step 3: Write the implementation**
 
 ```typescript
 // apps/api/src/auth/auth.service.ts
@@ -1397,17 +1397,17 @@ export class AuthService {
 }
 ```
 
-- [ ] **Step 4: Run test to verify it passes**
+- [x] **Step 4: Run test to verify it passes**
 
 Run: `pnpm --filter @us-os/api test -- auth.service`
 Expected: PASS
 
-- [ ] **Step 5: Run Task 8's local.strategy test too, now that AuthService exists**
+- [x] **Step 5: Run Task 8's local.strategy test too, now that AuthService exists**
 
 Run: `pnpm --filter @us-os/api test -- local.strategy`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/src/auth/auth.service.ts apps/api/src/auth/auth.service.spec.ts
@@ -1427,7 +1427,7 @@ git commit -m "feat(api): add AuthService with register, validateUser, getMe"
 - Consumes: `AuthService` (Task 10), `SessionService` (Task 6), `LocalAuthGuard`/`JwtAuthGuard` (Tasks 8, 9), `createZodValidationPipe` (Task 3), `RegisterRequestSchema`/`LoginRequestSchema` (Task 4).
 - Produces: `AuthModule`, routes `POST /auth/register`, `POST /auth/login`, `POST /auth/logout`, `GET /auth/me`. Imported by `AppModule` (Task 7's edit already references it).
 
-- [ ] **Step 1: Write the failing integration test**
+- [x] **Step 1: Write the failing integration test**
 
 ```typescript
 // apps/api/src/auth/auth.controller.spec.ts
@@ -1544,12 +1544,12 @@ describe('AuthController (integration)', () => {
 
 Note: `/auth/me` after logout still returns `401` because the *original* cookie sent by the test client is the same expired/cleared value the server told the client to drop — supertest doesn't carry cookie state between requests automatically, so this test explicitly re-sends the (now logically invalid) cookie only to prove the endpoint doesn't crash; the meaningful assertion is `logoutRes` clearing the cookie. This is acceptable per the spec's test #15.
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pnpm --filter @us-os/api test -- auth.controller`
 Expected: FAIL (module not found)
 
-- [ ] **Step 3: Write the controller**
+- [x] **Step 3: Write the controller**
 
 ```typescript
 // apps/api/src/auth/auth.controller.ts
@@ -1606,7 +1606,7 @@ export class AuthController {
 
 `login`'s `@Body() _dto: LoginRequest` parameter exists only so the Zod pipe validates the raw body shape before `LocalAuthGuard`'s strategy reads `req.body.email`/`req.body.password` — Nest runs pipes before guards execute the route handler binding for the strategy's `validate()`, but `passport-local` reads directly from `req.body`, independent of the parameter decorator; the pipe still guards against malformed payloads reaching the strategy.
 
-- [ ] **Step 4: Write the module**
+- [x] **Step 4: Write the module**
 
 ```typescript
 // apps/api/src/auth/auth.module.ts
@@ -1626,12 +1626,12 @@ import { LocalStrategy } from './local.strategy';
 export class AuthModule {}
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `pnpm --filter @us-os/api test -- auth.controller`
 Expected: PASS
 
-- [ ] **Step 6: Commit**
+- [x] **Step 6: Commit**
 
 ```bash
 git add apps/api/src/auth/auth.controller.ts apps/api/src/auth/auth.module.ts apps/api/src/auth/auth.controller.spec.ts
@@ -1654,7 +1654,7 @@ git commit -m "feat(api): add AuthController with register/login/logout/me route
   - `class SpacesService { createSpace(userId: string, name: string): Promise<Space>; generatePairingCode(userId: string): Promise<{ code: string; expiresAt: Date }>; redeemPairingCode(userId: string, code: string): Promise<{ spaceId: string }>; }`
   - Consumed by `SpacesController` (Task 13).
 
-- [ ] **Step 1: Write the pairing code generator with its own test inline (small enough not to warrant a separate file)**
+- [x] **Step 1: Write the pairing code generator with its own test inline (small enough not to warrant a separate file)**
 
 ```typescript
 // apps/api/src/spaces/pairing-code.util.ts
@@ -1672,7 +1672,7 @@ export function generatePairingCodeString(): string {
 }
 ```
 
-- [ ] **Step 2: Write the failing tests for SpacesService**
+- [x] **Step 2: Write the failing tests for SpacesService**
 
 ```typescript
 // apps/api/src/spaces/spaces.service.spec.ts
@@ -1852,12 +1852,12 @@ describe('SpacesService (integration)', () => {
 });
 ```
 
-- [ ] **Step 3: Run tests to verify they fail**
+- [x] **Step 3: Run tests to verify they fail**
 
 Run: `pnpm --filter @us-os/api test -- spaces.service`
 Expected: FAIL (module not found)
 
-- [ ] **Step 4: Write the implementation**
+- [x] **Step 4: Write the implementation**
 
 ```typescript
 // apps/api/src/spaces/spaces.service.ts
@@ -1935,7 +1935,7 @@ export class SpacesService {
 
 This imports `Prisma` and `Space` from `@us-os/database` — check `packages/database/src/index.ts` re-exports `Prisma` and model types from `@prisma/client`; if it doesn't yet, add `export type { Space } from '@prisma/client'; export { Prisma } from '@prisma/client';` to `packages/database/src/index.ts` as part of this step.
 
-- [ ] **Step 5: Confirm `@us-os/database` exports what this file needs**
+- [x] **Step 5: Confirm `@us-os/database` exports what this file needs**
 
 Read `packages/database/src/index.ts`. If it only contains `export * from './client'; export * from './tenant-context';` and `./client.ts` doesn't already re-export `Prisma`/`Space`, add to `packages/database/src/index.ts`:
 
@@ -1946,12 +1946,12 @@ export { Prisma } from '@prisma/client';
 export type { Space, User, SpaceMembership, PairingCode } from '@prisma/client';
 ```
 
-- [ ] **Step 6: Run tests to verify they pass**
+- [x] **Step 6: Run tests to verify they pass**
 
 Run: `pnpm --filter @us-os/database typecheck && pnpm --filter @us-os/api test -- spaces.service`
 Expected: PASS
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/spaces packages/database/src/index.ts
@@ -1971,7 +1971,7 @@ git commit -m "feat(api): add SpacesService with create/generate-code/redeem-cod
 - Consumes: `SpacesService` (Task 12), `SessionService` (Task 6), `JwtAuthGuard` (Task 9), `createZodValidationPipe` (Task 3), `CreateSpaceRequestSchema`/`RedeemPairingCodeRequestSchema` (Task 4).
 - Produces: `SpacesModule`, routes `POST /spaces`, `POST /spaces/pairing-codes`, `POST /spaces/pairing-codes/redeem`. Imported by `AppModule` (Task 7's edit already references it).
 
-- [ ] **Step 1: Write the failing integration test**
+- [x] **Step 1: Write the failing integration test**
 
 ```typescript
 // apps/api/src/spaces/spaces.controller.spec.ts
@@ -2067,12 +2067,12 @@ describe('SpacesController (integration)', () => {
 });
 ```
 
-- [ ] **Step 2: Run test to verify it fails**
+- [x] **Step 2: Run test to verify it fails**
 
 Run: `pnpm --filter @us-os/api test -- spaces.controller`
 Expected: FAIL (module not found)
 
-- [ ] **Step 3: Write the controller**
+- [x] **Step 3: Write the controller**
 
 ```typescript
 // apps/api/src/spaces/spaces.controller.ts
@@ -2129,7 +2129,7 @@ export class SpacesController {
 }
 ```
 
-- [ ] **Step 4: Write the module**
+- [x] **Step 4: Write the module**
 
 ```typescript
 // apps/api/src/spaces/spaces.module.ts
@@ -2146,17 +2146,17 @@ import { SpacesService } from './spaces.service';
 export class SpacesModule {}
 ```
 
-- [ ] **Step 5: Run test to verify it passes**
+- [x] **Step 5: Run test to verify it passes**
 
 Run: `pnpm --filter @us-os/api test -- spaces.controller`
 Expected: PASS
 
-- [ ] **Step 6: Run the full apps/api suite now that AppModule's imports (Task 7) resolve**
+- [x] **Step 6: Run the full apps/api suite now that AppModule's imports (Task 7) resolve**
 
 Run: `pnpm --filter @us-os/api test`
 Expected: PASS (all specs, including `app.module.spec.ts` and `tenant.middleware.spec.ts` from Task 7)
 
-- [ ] **Step 7: Commit**
+- [x] **Step 7: Commit**
 
 ```bash
 git add apps/api/src/spaces/spaces.controller.ts apps/api/src/spaces/spaces.module.ts apps/api/src/spaces/spaces.controller.spec.ts
@@ -2174,7 +2174,7 @@ git commit -m "feat(api): add SpacesController with create/generate-code/redeem 
 - Consumes: `prisma`, `TenantContext`, `withTenantTransaction` from `@us-os/database`; `SessionService` (Task 6); `AuthModule`/`SpacesModule` for a full app instance.
 - Produces: no new production code — this closes the two test-matrix gaps (spec items 16 and 17) that need multiple already-built modules together.
 
-- [ ] **Step 1: Write the RLS-context and JWT-payload tests**
+- [x] **Step 1: Write the RLS-context and JWT-payload tests**
 
 ```typescript
 // apps/api/src/tenant/tenant-integration.spec.ts
@@ -2278,12 +2278,12 @@ describe('Tenant context integration (RLS pipeline + JWT payload)', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests**
+- [x] **Step 2: Run the tests**
 
 Run: `pnpm --filter @us-os/api test -- tenant-integration`
 Expected: PASS
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/api/src/tenant/tenant-integration.spec.ts
@@ -2307,7 +2307,7 @@ No design polish — plain HTML form elements, inline error text, no styling. Th
 **Interfaces:**
 - Consumes: `RegisterRequest`, `LoginRequest`, `CreateSpaceRequest`, `RedeemPairingCodeRequest`, `AuthMeResponse`, `PairingCodeResponse` from `@us-os/shared-types` (Task 4).
 
-- [ ] **Step 1: Add the API base URL to Next config**
+- [x] **Step 1: Add the API base URL to Next config**
 
 Read `apps/web/next.config.js` first, then replace:
 
@@ -2323,7 +2323,7 @@ const nextConfig = {
 module.exports = nextConfig;
 ```
 
-- [ ] **Step 2: Write a tiny fetch helper**
+- [x] **Step 2: Write a tiny fetch helper**
 
 ```typescript
 // apps/web/lib/api.ts
@@ -2352,7 +2352,7 @@ export async function apiFetch<T>(path: string, init?: RequestInit): Promise<T> 
 }
 ```
 
-- [ ] **Step 3: Register page**
+- [x] **Step 3: Register page**
 
 ```tsx
 // apps/web/app/register/page.tsx
@@ -2406,7 +2406,7 @@ export default function RegisterPage() {
 }
 ```
 
-- [ ] **Step 4: Login page**
+- [x] **Step 4: Login page**
 
 ```tsx
 // apps/web/app/login/page.tsx
@@ -2456,7 +2456,7 @@ export default function LoginPage() {
 }
 ```
 
-- [ ] **Step 5: Onboarding page (create Space, show pairing code)**
+- [x] **Step 5: Onboarding page (create Space, show pairing code)**
 
 ```tsx
 // apps/web/app/onboarding/page.tsx
@@ -2514,7 +2514,7 @@ export default function OnboardingPage() {
 
 `Space` here is a plain shape (`{ id, name, createdAt, updatedAt }`) returned as-is by the API; add `export interface Space { id: string; name: string; createdAt: string; updatedAt: string; }` to `packages/shared-types/src/space.ts` (append to the file created in Task 4) since the controller returns the raw Prisma row, not a Zod-validated shape, and the frontend needs the type.
 
-- [ ] **Step 6: Add the `Space` interface to shared-types**
+- [x] **Step 6: Add the `Space` interface to shared-types**
 
 Read `packages/shared-types/src/space.ts`, then append:
 
@@ -2527,7 +2527,7 @@ export interface Space {
 }
 ```
 
-- [ ] **Step 7: Onboarding pair page (redeem a code)**
+- [x] **Step 7: Onboarding pair page (redeem a code)**
 
 ```tsx
 // apps/web/app/onboarding/pair/page.tsx
@@ -2571,19 +2571,19 @@ export default function OnboardingPairPage() {
 }
 ```
 
-- [ ] **Step 8: Typecheck the web app**
+- [x] **Step 8: Typecheck the web app**
 
 Run: `pnpm --filter @us-os/web typecheck`
 Expected: passes
 
-- [ ] **Step 9: Manual click-through verification**
+- [x] **Step 9: Manual click-through verification**
 
 Run the stack: `pnpm dev` (or `pnpm --filter @us-os/api dev` and `pnpm --filter @us-os/web dev` in separate terminals), then in a browser:
 1. Visit `http://localhost:3000/register`, register user A → redirected to `/onboarding`.
 2. Create a Space → see the pairing code displayed.
 3. Open a second browser (or incognito) at `/register`, register user B with the pairing code filled in → redirected straight to `/dashboard` (or `/onboarding` if `/dashboard` doesn't exist yet — a 404 there is expected and fine, since no dashboard page exists in this phase; confirm via `/onboarding/pair` flow too by registering a third user without a code, then submitting the (already-redeemed) code on `/onboarding/pair` and confirming the "already been used" error renders).
 
-- [ ] **Step 10: Commit**
+- [x] **Step 10: Commit**
 
 ```bash
 git add apps/web/lib apps/web/app/register apps/web/app/login apps/web/app/onboarding apps/web/next.config.js packages/shared-types/src/space.ts
