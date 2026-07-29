@@ -227,4 +227,99 @@ describe('MilestonesController (integration)', () => {
     expect(byId.get(corrupted.body.id)).toBeNull();
     expect(byId.get(good.body.id)).toBe('readable note');
   });
+
+  it('either partner in the space may edit and delete an entry the other created', async () => {
+    const creator = await registerWithSpace('either-partner-creator');
+    const codeRes = await request(app.getHttpServer())
+      .post('/spaces/pairing-codes')
+      .set('Cookie', creator.cookie)
+      .send({});
+    const joinerEmail = `milestones-either-partner-joiner-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+    createdEmails.push(joinerEmail);
+    const joinerRegister = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: joinerEmail, password: 'supersecret' });
+    const joinerRegisterCookie = joinerRegister.headers['set-cookie'] as unknown as string[];
+    const joinerRedeem = await request(app.getHttpServer())
+      .post('/spaces/pairing-codes/redeem')
+      .set('Cookie', joinerRegisterCookie)
+      .send({ code: codeRes.body.code });
+    const joinerCookie = joinerRedeem.headers['set-cookie'] as unknown as string[];
+
+    const created = await request(app.getHttpServer())
+      .post('/milestones')
+      .set('Cookie', creator.cookie)
+      .send({ title: 'Creator entry', eventDate: '2024-01-01' });
+
+    const editByJoiner = await request(app.getHttpServer())
+      .patch(`/milestones/${created.body.id}`)
+      .set('Cookie', joinerCookie)
+      .send({ title: 'Edited by joiner' });
+    expect(editByJoiner.status).toBe(200);
+    expect(editByJoiner.body.createdBy).not.toBe(editByJoiner.body.id);
+
+    const deleteByJoiner = await request(app.getHttpServer())
+      .delete(`/milestones/${created.body.id}`)
+      .set('Cookie', joinerCookie);
+    expect(deleteByJoiner.status).toBe(204);
+  });
+
+  it('returns 404 (not 403) when updating or deleting an id belonging to another space', async () => {
+    const { cookie: cookieA } = await registerWithSpace('cross-space-a');
+    const { cookie: cookieB } = await registerWithSpace('cross-space-b');
+
+    const created = await request(app.getHttpServer())
+      .post('/milestones')
+      .set('Cookie', cookieA)
+      .send({ title: 'Space A entry', eventDate: '2024-01-01' });
+
+    const patchRes = await request(app.getHttpServer())
+      .patch(`/milestones/${created.body.id}`)
+      .set('Cookie', cookieB)
+      .send({ title: 'hijacked' });
+    expect(patchRes.status).toBe(404);
+
+    const deleteRes = await request(app.getHttpServer())
+      .delete(`/milestones/${created.body.id}`)
+      .set('Cookie', cookieB);
+    expect(deleteRes.status).toBe(404);
+  });
+
+  it('rejects invalid payloads with 400 on create', async () => {
+    const { cookie } = await registerWithSpace('validation');
+
+    const emptyTitle = await request(app.getHttpServer())
+      .post('/milestones')
+      .set('Cookie', cookie)
+      .send({ title: '', eventDate: '2024-01-01' });
+    expect(emptyTitle.status).toBe(400);
+
+    const badCategory = await request(app.getHttpServer())
+      .post('/milestones')
+      .set('Cookie', cookie)
+      .send({ title: 'x', eventDate: '2024-01-01', category: 'vacation' });
+    expect(badCategory.status).toBe(400);
+
+    const badDate = await request(app.getHttpServer())
+      .post('/milestones')
+      .set('Cookie', cookie)
+      .send({ title: 'x', eventDate: '2024-01-01T10:30:00Z' });
+    expect(badDate.status).toBe(400);
+
+    const noteTooLong = await request(app.getHttpServer())
+      .post('/milestones')
+      .set('Cookie', cookie)
+      .send({ title: 'x', eventDate: '2024-01-01', note: 'a'.repeat(10001) });
+    expect(noteTooLong.status).toBe(400);
+  });
+
+  it('rejects requests without a session cookie with 401 on all four endpoints', async () => {
+    const patchRes = await request(app.getHttpServer()).patch('/milestones/00000000-0000-0000-0000-000000000000');
+    const deleteRes = await request(app.getHttpServer()).delete('/milestones/00000000-0000-0000-0000-000000000000');
+    const postRes = await request(app.getHttpServer()).post('/milestones').send({});
+
+    expect(patchRes.status).toBe(401);
+    expect(deleteRes.status).toBe(401);
+    expect(postRes.status).toBe(401);
+  });
 });
