@@ -32,7 +32,7 @@
 **Interfaces:**
 - Produces: `MilestoneCategorySchema` (`z.ZodEnum`), `MilestoneCategory` type, `CreateMilestoneRequestSchema`, `CreateMilestoneRequest` type, `UpdateMilestoneRequestSchema`, `UpdateMilestoneRequest` type, `MilestoneResponse` interface (`{ id, title, eventDate, category, note, createdBy, createdAt, updatedAt }`) — all consumed by Task 4's controller/service and Task 8's frontend page.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `packages/shared-types/src/milestone.test.ts`:
 
@@ -104,12 +104,12 @@ describe('UpdateMilestoneRequestSchema', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `pnpm --filter @us-os/shared-types test`
 Expected: FAIL — `Cannot find module './milestone'`
 
-- [ ] **Step 3: Implement the schemas**
+- [x] **Step 3: Implement the schemas**
 
 Create `packages/shared-types/src/milestone.ts`:
 
@@ -158,12 +158,12 @@ export * from './space';
 export * from './milestone';
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `pnpm --filter @us-os/shared-types test`
 Expected: PASS, all `milestone.test.ts` cases green.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add packages/shared-types/src/milestone.ts packages/shared-types/src/milestone.test.ts packages/shared-types/src/index.ts
@@ -184,7 +184,7 @@ git commit -m "feat(shared-types): add milestone request/response Zod schemas"
 - Consumes: nothing new.
 - Produces: Prisma `Milestone` model with fields `id, spaceId, createdBy, title, eventDate (Date), category (string), noteCiphertext, noteIv, noteAuthTag, noteVersion, createdAt, updatedAt` — consumed by Task 4's `MilestonesService`. `Milestone` type now exported from `@us-os/database` for use in `apps/api`.
 
-- [ ] **Step 1: Update the Prisma schema**
+- [x] **Step 1: Update the Prisma schema**
 
 In `packages/database/prisma/schema.prisma`, replace the existing `Milestone` model with:
 
@@ -228,13 +228,13 @@ model User {
 }
 ```
 
-- [ ] **Step 2: Generate an empty migration to hand-write**
+- [x] **Step 2: Generate an empty migration to hand-write**
 
 Run: `pnpm --filter @us-os/database exec prisma migrate dev --create-only --name update_milestone_timeline_fields`
 
 This creates a new folder under `packages/database/prisma/migrations/` without applying it. Prisma's auto-generated SQL in that folder will likely try to `DROP COLUMN occurred_at` / `ADD COLUMN event_date` (destructive rename modeled as drop+add) — discard whatever it generated.
 
-- [ ] **Step 3: Replace the generated migration.sql with a hand-written rename-and-extend migration**
+- [x] **Step 3: Replace the generated migration.sql with a hand-written rename-and-extend migration**
 
 Replace the full contents of the new `migration.sql` file with:
 
@@ -265,13 +265,13 @@ ALTER TABLE "milestones" ADD CONSTRAINT "milestones_created_by_fkey" FOREIGN KEY
 -- row-level, not column-level, and needs no changes for these new columns.
 ```
 
-- [ ] **Step 4: Apply the migration**
+- [x] **Step 4: Apply the migration**
 
 Run: `pnpm db:migrate`
 
 Expected: the pending migration applies cleanly against the local Postgres from `docker-compose.yml` (must be running: `docker compose up -d postgres`).
 
-- [ ] **Step 5: Regenerate the Prisma client and export the `Milestone` type**
+- [x] **Step 5: Regenerate the Prisma client and export the `Milestone` type**
 
 Run: `pnpm db:generate`
 
@@ -286,7 +286,7 @@ export type { Space, User, SpaceMembership, PairingCode, Milestone } from '@pris
 
 (No change needed to `TENANT_SCOPED_MODELS` in `packages/database/src/client.ts` — `'Milestone'` is already in that `Set`.)
 
-- [ ] **Step 6: Update the existing RLS integration test for the new required `createdBy` field and renamed `eventDate` column**
+- [x] **Step 6: Update the existing RLS integration test for the new required `createdBy` field and renamed `eventDate` column**
 
 Replace the full contents of `packages/database/test/rls.integration.test.ts`:
 
@@ -428,17 +428,17 @@ describe('RLS tenant isolation (integration)', () => {
 });
 ```
 
-- [ ] **Step 7: Run the database package tests to verify they pass**
+- [x] **Step 7: Run the database package tests to verify they pass**
 
 Run: `pnpm --filter @us-os/database test`
 Expected: PASS (requires local Postgres running with `DATABASE_URL`/`APP_DATABASE_URL` set — see `docker-compose.yml`).
 
-- [ ] **Step 8: Run typecheck across the workspace**
+- [x] **Step 8: Run typecheck across the workspace**
 
 Run: `pnpm typecheck`
 Expected: PASS — no other file references the old `occurredAt` field (only the RLS test did, already updated in Step 6).
 
-- [ ] **Step 9: Commit**
+- [x] **Step 9: Commit**
 
 ```bash
 git add packages/database/prisma/schema.prisma packages/database/prisma/migrations packages/database/src/index.ts packages/database/test/rls.integration.test.ts
@@ -457,7 +457,7 @@ git commit -m "feat(database): extend Milestone with category, attribution, and 
 **Interfaces:**
 - Produces: `CryptoService.encryptNote(plaintext: string): EncryptedNote` and `CryptoService.decryptNote(input: EncryptedNote): string`, where `EncryptedNote = { ciphertext: string; iv: string; authTag: string }` (all base64 strings) — consumed by Task 4's `MilestonesService`. `CryptoModule` exports `CryptoService`.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Create `apps/api/src/crypto/crypto.service.spec.ts`:
 
@@ -512,12 +512,12 @@ describe('CryptoService', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `pnpm --filter @us-os/api test -- crypto.service`
 Expected: FAIL — `Cannot find module './crypto.service'`
 
-- [ ] **Step 3: Implement `CryptoService`**
+- [x] **Step 3: Implement `CryptoService`**
 
 Create `apps/api/src/crypto/crypto.service.ts`:
 
@@ -585,12 +585,12 @@ import { CryptoService } from './crypto.service';
 export class CryptoModule {}
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `ENCRYPTION_MASTER_KEY=VtSyCyvXNXUu44OK/8QX9nCFx5qyOhf1va3ipjNrYbs= pnpm --filter @us-os/api test -- crypto.service`
 Expected: PASS, all 5 cases green.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/crypto
@@ -613,7 +613,7 @@ git commit -m "feat(api): add CryptoModule for AES-256-GCM note encryption"
 - Consumes: `CryptoService` (Task 3), `CreateMilestoneRequestSchema`/`UpdateMilestoneRequestSchema`/`MilestoneResponse` (Task 1), `AuthenticatedUser` (`apps/api/src/auth/types.ts`), `JwtAuthGuard` (`apps/api/src/auth/jwt-auth.guard.ts`), `createZodValidationPipe` (`apps/api/src/common/zod-validation.pipe.ts`), `prisma` (`@us-os/database`).
 - Produces: `requireSpaceId(spaceId: string | null): string` (throws `ConflictException` if null), `MilestonesService` with `list()`, `create(spaceId, userId, dto)`, `update(id, dto)`, `remove(id)` methods, `MilestonesController` mounted at `/milestones` — consumed by Task 5 and Task 6's additional tests and Task 8's frontend.
 
-- [ ] **Step 1: Write the failing happy-path integration tests**
+- [x] **Step 1: Write the failing happy-path integration tests**
 
 Create `apps/api/src/milestones/milestones.controller.spec.ts`:
 
@@ -736,12 +736,12 @@ describe('MilestonesController (integration)', () => {
 });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail**
+- [x] **Step 2: Run the tests to verify they fail**
 
 Run: `ENCRYPTION_MASTER_KEY=VtSyCyvXNXUu44OK/8QX9nCFx5qyOhf1va3ipjNrYbs= pnpm --filter @us-os/api test -- milestones.controller`
 Expected: FAIL — `Cannot find module './milestones.module'`
 
-- [ ] **Step 3: Implement the module**
+- [x] **Step 3: Implement the module**
 
 Create `apps/api/src/milestones/require-space.ts`:
 
@@ -981,12 +981,12 @@ export class AppModule implements NestModule {
 }
 ```
 
-- [ ] **Step 4: Run the tests to verify they pass**
+- [x] **Step 4: Run the tests to verify they pass**
 
 Run: `ENCRYPTION_MASTER_KEY=VtSyCyvXNXUu44OK/8QX9nCFx5qyOhf1va3ipjNrYbs= pnpm --filter @us-os/api test -- milestones.controller`
 Expected: PASS, all 5 cases green. (Requires local Postgres running.)
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add apps/api/src/milestones apps/api/src/app.module.ts
@@ -1003,7 +1003,7 @@ git commit -m "feat(api): add MilestonesModule with CRUD endpoints"
 **Interfaces:**
 - Consumes: `MilestonesService`/`MilestonesController` (Task 4), `prisma` + `TenantContext` (`@us-os/database`) for direct DB inspection/corruption.
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to `apps/api/src/milestones/milestones.controller.spec.ts`, inside the existing `describe` block (add this import at the top of the file alongside the others: `import { TenantContext } from '@us-os/database';`):
 
@@ -1102,12 +1102,12 @@ Append to `apps/api/src/milestones/milestones.controller.spec.ts`, inside the ex
   });
 ```
 
-- [ ] **Step 2: Run the tests to verify they fail (if any assertion is unmet) or pass immediately**
+- [x] **Step 2: Run the tests to verify they fail (if any assertion is unmet) or pass immediately**
 
 Run: `ENCRYPTION_MASTER_KEY=VtSyCyvXNXUu44OK/8QX9nCFx5qyOhf1va3ipjNrYbs= pnpm --filter @us-os/api test -- milestones.controller`
 Expected: PASS — Task 4's service already implements this behavior; this task is regression coverage. If anything fails, fix `milestones.service.ts` from Task 4 to match (do not weaken the test).
 
-- [ ] **Step 3: Commit**
+- [x] **Step 3: Commit**
 
 ```bash
 git add apps/api/src/milestones/milestones.controller.spec.ts
@@ -1124,7 +1124,7 @@ git commit -m "test(api): cover milestone note encryption, whitespace normalizat
 **Interfaces:**
 - Consumes: `MilestonesService`/`MilestonesController` (Task 4).
 
-- [ ] **Step 1: Write the failing tests**
+- [x] **Step 1: Write the failing tests**
 
 Append to the same `describe` block:
 
@@ -1225,17 +1225,17 @@ Append to the same `describe` block:
   });
 ```
 
-- [ ] **Step 2: Run the tests to verify they pass**
+- [x] **Step 2: Run the tests to verify they pass**
 
 Run: `ENCRYPTION_MASTER_KEY=VtSyCyvXNXUu44OK/8QX9nCFx5qyOhf1va3ipjNrYbs= pnpm --filter @us-os/api test -- milestones.controller`
 Expected: PASS — Task 4's implementation already handles these; this is regression coverage for authorization/validation edge cases. If anything fails, fix `milestones.service.ts`/`milestones.controller.ts` to match.
 
-- [ ] **Step 3: Run the full apps/api test suite once more**
+- [x] **Step 3: Run the full apps/api test suite once more**
 
 Run: `ENCRYPTION_MASTER_KEY=VtSyCyvXNXUu44OK/8QX9nCFx5qyOhf1va3ipjNrYbs= pnpm --filter @us-os/api test`
 Expected: PASS, all suites green (auth, spaces, tenant, health, crypto, milestones).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/api/src/milestones/milestones.controller.spec.ts
@@ -1254,7 +1254,7 @@ git commit -m "test(api): cover milestone authorization, cross-space isolation, 
 
 **Interfaces:** none (env/config only).
 
-- [ ] **Step 1: Add `ENCRYPTION_MASTER_KEY` to turbo's `test` task env passthrough**
+- [x] **Step 1: Add `ENCRYPTION_MASTER_KEY` to turbo's `test` task env passthrough**
 
 In `turbo.json`, update the `test` task:
 
@@ -1266,7 +1266,7 @@ In `turbo.json`, update the `test` task:
 }
 ```
 
-- [ ] **Step 2: Add the env var to CI**
+- [x] **Step 2: Add the env var to CI**
 
 In `.github/workflows/ci.yml`, add a line to the `env:` block already used for `DATABASE_URL`/`APP_DATABASE_URL` (same job, same block — this is a fixed dev/test key, not a real secret, checked in like the Postgres credentials above it):
 
@@ -1277,7 +1277,7 @@ In `.github/workflows/ci.yml`, add a line to the `env:` block already used for `
       ENCRYPTION_MASTER_KEY: "VtSyCyvXNXUu44OK/8QX9nCFx5qyOhf1va3ipjNrYbs="
 ```
 
-- [ ] **Step 3: Document the env var for local dev**
+- [x] **Step 3: Document the env var for local dev**
 
 Add this line (with a short comment) to both `.env.example` (repo root) and `apps/api/.env.example`, following the file's existing style:
 
@@ -1287,12 +1287,12 @@ Add this line (with a short comment) to both `.env.example` (repo root) and `app
 ENCRYPTION_MASTER_KEY=
 ```
 
-- [ ] **Step 4: Verify CI config is valid YAML and the full suite runs locally with the var set**
+- [x] **Step 4: Verify CI config is valid YAML and the full suite runs locally with the var set**
 
 Run: `ENCRYPTION_MASTER_KEY=VtSyCyvXNXUu44OK/8QX9nCFx5qyOhf1va3ipjNrYbs= pnpm test`
 Expected: PASS across all workspaces.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add turbo.json .github/workflows/ci.yml .env.example apps/api/.env.example
@@ -1309,7 +1309,7 @@ git commit -m "chore: wire ENCRYPTION_MASTER_KEY through turbo, CI, and env exam
 **Interfaces:**
 - Consumes: `apiFetch` (`apps/web/lib/api.ts`), `MilestoneResponse`/`CreateMilestoneRequest`/`MilestoneCategory` (`@us-os/shared-types`), `AuthMeResponse` (`@us-os/shared-types`, already used by `login/page.tsx`).
 
-- [ ] **Step 1: Implement the page**
+- [x] **Step 1: Implement the page**
 
 Create `apps/web/app/timeline/page.tsx`:
 
@@ -1462,16 +1462,16 @@ export default function TimelinePage() {
 }
 ```
 
-- [ ] **Step 2: Typecheck the web app**
+- [x] **Step 2: Typecheck the web app**
 
 Run: `pnpm --filter @us-os/web typecheck`
 Expected: PASS.
 
-- [ ] **Step 3: Manually verify in the browser**
+- [x] **Step 3: Manually verify in the browser**
 
 Run: `docker compose up -d postgres redis`, then in one terminal `ENCRYPTION_MASTER_KEY=VtSyCyvXNXUu44OK/8QX9nCFx5qyOhf1va3ipjNrYbs= pnpm dev --filter=api`, in another `pnpm dev --filter=web`. Register a user, create a Space, navigate to `http://localhost:3000/timeline`, and confirm: the page redirects to `/login` when logged out; when logged in, you can add an entry with a note, see it listed, edit it, and delete it.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add apps/web/app/timeline/page.tsx
@@ -1486,3 +1486,22 @@ git commit -m "feat(web): add minimal /timeline page for the Life Timeline & Eve
 - **Non-goals respected:** no pagination, no soft delete, no optimistic locking, no rich text/media, no per-note envelope encryption, no `updatedBy` — none of these were introduced anywhere in the plan.
 - **Deviation from the spec's literal wording, noted for the executor:** the spec mentions validating `ENCRYPTION_MASTER_KEY` with "`class-validator`, custom `IsBase64Key32Byte` constraint." This codebase has no `class-validator` anywhere (Zod + `createZodValidationPipe` is the established pattern for request DTOs, and startup env-var checks use a plain top-level throw — see `JWT_SECRET` in `session.service.ts`). Task 3 achieves the same fail-fast-at-boot guarantee with a plain function instead, to avoid introducing a second, inconsistent validation library for a single field.
 - **Plan review (2026-07-29):** reviewed against RLS scoping, migration sequencing, and crypto test isolation. Only actionable finding: `MilestonesService.list()` relied on RLS scoping without a comment explaining it (unlike `findOrThrow`, which already had one) — fixed in Task 4 by adding a matching comment. Migration `DELETE`-before-`NOT NULL` sequencing and the Jest `jest.resetModules()`/`afterAll` pattern in Task 3's crypto tests were both reviewed and confirmed correct as written; no changes needed.
+
+## Execution Log (2026-07-29 / 2026-07-30)
+
+All 8 tasks implemented and committed on `fr-02-life-timeline-event-ledger-engine`, PR #11, merged into CI green (`Build & Test` + `Secret Scanning` both pass).
+
+**Deviations from the plan, found and fixed during execution (all necessary — the plan's literal text would not have worked as written):**
+
+1. **`apps/api/src/tenant/tenant-integration.spec.ts`** (pre-existing file, not listed in Task 2's file list) still referenced the old `occurredAt` column and lacked the now-required `createdBy` field — updated alongside Task 2's migration, or `pnpm typecheck` fails.
+2. **Task 4's integration test never wires `TenantMiddleware`.** `Milestone` is a tenant-scoped Prisma model; without middleware setting `TenantContext` from the request's JWT cookie, every query throws `TenantContext: no space set`. The real app gets this from `AppModule.configure()`, which isn't part of the test's module graph (only individual modules are imported) — fixed by instantiating `TenantMiddleware` manually in `beforeAll`, mirroring `AppModule`'s wiring.
+3. **Task 4's controller used method-level `@UsePipes` combined with `@Param('id')`.** `createZodValidationPipe` has no `ArgumentMetadata`-based filtering, so the method-level pipe also ran the body schema against the route's `id` string param, failing every PATCH with a spurious 400. Fixed by moving to parameter-scoped `@Body(pipe)` on `create()`/`update()`.
+4. **Test cleanup FK ordering:** the controller spec's `afterAll` originally deleted users directly; `milestones.created_by` is a RESTRICT FK, so any test that created a milestone made user cleanup fail. Fixed by deleting the users' spaces first (cascades milestones/memberships), matching the pattern already used in `rls.integration.test.ts`.
+5. **Task 7's file list names `apps/api/.env.example`, which doesn't exist in this repo.** The API's runtime env vars (`PORT`, `APP_DATABASE_URL`, etc.) live in the root `.env.example` — only that file was modified.
+6. **CI-only lint failure (never caught locally because the plan's steps never run `pnpm lint`):** `crypto.service.spec.ts`'s `require()` calls (needed to reload the module fresh per test against a different `ENCRYPTION_MASTER_KEY`) tripped `@typescript-eslint/no-require-imports`. Fixed with scoped `eslint-disable-next-line` comments rather than a rule change, since the dynamic re-import is intentional, not accidental CJS usage. Pushed as a follow-up commit after the first CI run failed; the second run passed both `Build & Test` and `Secret Scanning`.
+
+**Exit-criteria verification (2026-07-30), fresh evidence:**
+
+- **"An event created via the frontend form correctly persists to PostgreSQL"** — confirmed with a real headless-browser session (Playwright/Chromium, installed ephemerally for this check, not added as a repo dependency): registered a user, created a Space, and submitted the `/timeline` "Add entry" form through actual DOM interaction (label-targeted fills + button clicks, not a simulated API call). Independently verified via a raw `psql` query against `milestones` (bypassing Prisma/the API entirely) that both submitted rows existed with the exact `event_date`/`category` values entered, and that the row with a note had `note_ciphertext IS NOT NULL` (proving encryption, not plaintext storage). Verification rows were deleted afterward.
+- **"Events are returned and rendered in reverse-chronological order"** — this wording conflicts with the shipped and spec'd behavior, which is deliberately oldest-first ("life story order", `orderBy: [{ eventDate: 'asc' }, ...]`, spec.md L119-121). Per explicit human confirmation during this verification pass, the oldest-first behavior is correct and the criterion's wording was imprecise. Confirmed via the same browser session: after adding a second, earlier-dated entry, the rendered `<li>` order was `["Started dating (earlier)" (2020-01-01), "First apartment..." (2024-03-15)]` — ascending by `eventDate`, matching `milestones.controller.spec.ts`'s `lists milestones oldest-first by eventDate` test.
+- **"Automated backend unit and integration tests pass cleanly (`pnpm test`)"** — verified with a forced, non-cached run (`turbo run test --force`, `0 cached, 5 total`, exit code 0): `@us-os/shared-types` 24/24, `@us-os/database` 13/13, `@us-os/api` 73/73 — 110/110 tests passing.
