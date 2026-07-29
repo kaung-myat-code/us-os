@@ -18,7 +18,7 @@
     "test": {
       "dependsOn": ["^build"],
       "outputs": ["coverage/**"],
-      "env": ["DATABASE_URL", "APP_DATABASE_URL"]
+      "env": ["DATABASE_URL", "APP_DATABASE_URL", "ENCRYPTION_MASTER_KEY"]
     }
   }
 }
