@@ -108,7 +108,7 @@ model Decision {
   space        Space           @relation(fields: [spaceId], references: [id], onDelete: Cascade)
   creator      User            @relation(fields: [createdBy], references: [id])
   options      DecisionOption[]
-  chosenOption DecisionOption? @relation("ChosenOption", fields: [chosenOptionId], references: [id])
+  chosenOption DecisionOption? @relation("ChosenOption", fields: [chosenOptionId], references: [id], onDelete: Restrict)
 
   @@index([spaceId])
   @@map("decisions")
