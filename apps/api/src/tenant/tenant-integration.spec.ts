@@ -101,8 +101,9 @@ describe('Tenant context integration (RLS pipeline + JWT payload)', () => {
       prisma.milestone.create({
         data: {
           spaceId: memberAPayload!.spaceId as string,
+          createdBy: memberAPayload!.sub as string,
           title: 'RLS pipeline test milestone',
-          occurredAt: new Date(),
+          eventDate: new Date(),
         },
       }),
     );
