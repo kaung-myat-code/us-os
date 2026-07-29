@@ -27,7 +27,8 @@ model User {
   createdAt    DateTime @default(now()) @map("created_at")
   updatedAt    DateTime @updatedAt @map("updated_at")
 
-  memberships SpaceMembership[]
+  memberships       SpaceMembership[]
+  createdMilestones Milestone[]
 
   @@map("users")
 }
@@ -61,14 +62,21 @@ model PairingCode {
 }
 
 model Milestone {
-  id         String   @id @default(uuid()) @db.Uuid
-  spaceId    String   @map("space_id") @db.Uuid
-  title      String
-  occurredAt DateTime @map("occurred_at")
-  createdAt  DateTime @default(now()) @map("created_at")
-  updatedAt  DateTime @updatedAt @map("updated_at")
+  id             String    @id @default(uuid()) @db.Uuid
+  spaceId        String    @map("space_id") @db.Uuid
+  createdBy      String    @map("created_by") @db.Uuid
+  title          String
+  eventDate      DateTime  @map("event_date") @db.Date
+  category       String    @default("other")
+  noteCiphertext String?   @map("note_ciphertext")
+  noteIv         String?   @map("note_iv")
+  noteAuthTag    String?   @map("note_auth_tag")
+  noteVersion    Int?      @map("note_version") @default(1)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
 
-  space Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  space   Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  creator User  @relation(fields: [createdBy], references: [id])
 
   @@index([spaceId])
   @@map("milestones")
