@@ -16,7 +16,7 @@ describe('AppModule tenant middleware wiring', () => {
     await app.close();
   });
 
-  it('allows /health without an x-space-id header', async () => {
+  it('allows /health with no session cookie', async () => {
     const res = await request(app.getHttpServer()).get('/health');
     expect(res.status).toBe(200);
   });

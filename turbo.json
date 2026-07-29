@@ -7,12 +7,16 @@
       "outputs": [".next/**", "!.next/cache/**", "dist/**"]
     },
     "dev": {
+      "dependsOn": ["^build"],
       "cache": false,
       "persistent": true
     },
     "lint": {},
-    "typecheck": {},
+    "typecheck": {
+      "dependsOn": ["^build"]
+    },
     "test": {
+      "dependsOn": ["^build"],
       "outputs": ["coverage/**"],
       "env": ["DATABASE_URL", "APP_DATABASE_URL"]
     }
