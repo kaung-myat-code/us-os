@@ -16,6 +16,9 @@ model Space {
   milestones  Milestone[]
   memberships SpaceMembership[]
   pairingCodes PairingCode[]
+  decisions       Decision[]
+  decisionOptions DecisionOption[]
+  tradeOffItems   TradeOffItem[]
 
   @@map("spaces")
 }
@@ -29,6 +32,7 @@ model User {
 
   memberships       SpaceMembership[]
   createdMilestones Milestone[]
+  createdDecisions Decision[]
 
   @@map("users")
 }
@@ -80,4 +84,68 @@ model Milestone {
 
   @@index([spaceId])
   @@map("milestones")
+}
+
+model Decision {
+  id                  String    @id @default(uuid()) @db.Uuid
+  spaceId             String    @map("space_id") @db.Uuid
+  createdBy           String    @map("created_by") @db.Uuid
+  title               String
+  status              String    @default("open")
+  chosenOptionId      String?   @map("chosen_option_id") @db.Uuid
+  decidedAt           DateTime? @map("decided_at")
+  rationaleCiphertext String?   @map("rationale_ciphertext")
+  rationaleIv         String?   @map("rationale_iv")
+  rationaleAuthTag    String?   @map("rationale_auth_tag")
+  rationaleVersion    Int?      @map("rationale_version") @default(1)
+  outcomeCiphertext   String?   @map("outcome_ciphertext")
+  outcomeIv           String?   @map("outcome_iv")
+  outcomeAuthTag      String?   @map("outcome_auth_tag")
+  outcomeVersion      Int?      @map("outcome_version") @default(1)
+  createdAt           DateTime  @default(now()) @map("created_at")
+  updatedAt           DateTime  @updatedAt @map("updated_at")
+
+  space        Space           @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  creator      User            @relation(fields: [createdBy], references: [id])
+  options      DecisionOption[]
+  chosenOption DecisionOption? @relation("ChosenOption", fields: [chosenOptionId], references: [id])
+
+  @@index([spaceId])
+  @@map("decisions")
+}
+
+model DecisionOption {
+  id         String   @id @default(uuid()) @db.Uuid
+  spaceId    String   @map("space_id") @db.Uuid
+  decisionId String   @map("decision_id") @db.Uuid
+  label      String
+  createdAt  DateTime @default(now()) @map("created_at")
+  updatedAt  DateTime @updatedAt @map("updated_at")
+
+  decision  Decision       @relation(fields: [decisionId], references: [id], onDelete: Cascade)
+  space     Space          @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  tradeOffs TradeOffItem[]
+  chosenBy  Decision[]     @relation("ChosenOption")
+
+  @@index([decisionId])
+  @@index([spaceId])
+  @@map("decision_options")
+}
+
+model TradeOffItem {
+  id        String   @id @default(uuid()) @db.Uuid
+  spaceId   String   @map("space_id") @db.Uuid
+  optionId  String   @map("option_id") @db.Uuid
+  type      String
+  label     String
+  weight    Int
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  option DecisionOption @relation(fields: [optionId], references: [id], onDelete: Cascade)
+  space  Space          @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+
+  @@index([optionId])
+  @@index([spaceId])
+  @@map("trade_off_items")
 }
