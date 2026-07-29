@@ -1,6 +1,6 @@
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
-import { prisma } from '@us-os/database';
+import { prisma, TenantContext } from '@us-os/database';
 import cookieParser from 'cookie-parser';
 import type { NextFunction, Request, Response } from 'express';
 import request from 'supertest';
@@ -133,5 +133,98 @@ describe('MilestonesController (integration)', () => {
   it('rejects requests without a session cookie with 401', async () => {
     const res = await request(app.getHttpServer()).get('/milestones');
     expect(res.status).toBe(401);
+  });
+
+  it('round-trips a note and stores it encrypted (not plaintext) in the database', async () => {
+    const { cookie } = await registerWithSpace('note-roundtrip');
+
+    const created = await request(app.getHttpServer())
+      .post('/milestones')
+      .set('Cookie', cookie)
+      .send({ title: 'First apartment', eventDate: '2024-03-15', note: 'We moved in together' });
+
+    expect(created.body.note).toBe('We moved in together');
+
+    const meRes = await request(app.getHttpServer()).get('/auth/me').set('Cookie', cookie);
+    const spaceId = meRes.body.space.id as string;
+    const rawRow = await TenantContext.run(spaceId, () =>
+      prisma.milestone.findFirstOrThrow({ where: { id: created.body.id } }),
+    );
+    expect(rawRow.noteCiphertext).not.toBeNull();
+    expect(rawRow.noteCiphertext).not.toContain('We moved in together');
+  });
+
+  it('normalizes a whitespace-only note to null on create', async () => {
+    const { cookie } = await registerWithSpace('note-whitespace-create');
+
+    const res = await request(app.getHttpServer())
+      .post('/milestones')
+      .set('Cookie', cookie)
+      .send({ title: 'x', eventDate: '2024-01-01', note: '   ' });
+
+    expect(res.body.note).toBeNull();
+  });
+
+  it('PATCH note: "text" re-encrypts, null clears, omitted leaves untouched', async () => {
+    const { cookie } = await registerWithSpace('note-three-state');
+    const created = await request(app.getHttpServer())
+      .post('/milestones')
+      .set('Cookie', cookie)
+      .send({ title: 'x', eventDate: '2024-01-01', note: 'original note' });
+
+    const reencrypted = await request(app.getHttpServer())
+      .patch(`/milestones/${created.body.id}`)
+      .set('Cookie', cookie)
+      .send({ note: 'new text' });
+    expect(reencrypted.body.note).toBe('new text');
+
+    const untouched = await request(app.getHttpServer())
+      .patch(`/milestones/${created.body.id}`)
+      .set('Cookie', cookie)
+      .send({ title: 'renamed only' });
+    expect(untouched.body.note).toBe('new text');
+
+    const cleared = await request(app.getHttpServer())
+      .patch(`/milestones/${created.body.id}`)
+      .set('Cookie', cookie)
+      .send({ note: null });
+    expect(cleared.body.note).toBeNull();
+
+    const clearedByWhitespace = await request(app.getHttpServer())
+      .post('/milestones')
+      .set('Cookie', cookie)
+      .send({ title: 'y', eventDate: '2024-01-01', note: 'has a note' });
+    const clearedRes = await request(app.getHttpServer())
+      .patch(`/milestones/${clearedByWhitespace.body.id}`)
+      .set('Cookie', cookie)
+      .send({ note: '   ' });
+    expect(clearedRes.body.note).toBeNull();
+  });
+
+  it('recovers from a corrupted note: GET still returns 200 with note null, rest of list intact', async () => {
+    const { cookie } = await registerWithSpace('note-corrupt');
+    const good = await request(app.getHttpServer())
+      .post('/milestones')
+      .set('Cookie', cookie)
+      .send({ title: 'Good entry', eventDate: '2024-01-01', note: 'readable note' });
+    const corrupted = await request(app.getHttpServer())
+      .post('/milestones')
+      .set('Cookie', cookie)
+      .send({ title: 'Corrupted entry', eventDate: '2024-02-01', note: 'will be corrupted' });
+
+    const meRes = await request(app.getHttpServer()).get('/auth/me').set('Cookie', cookie);
+    const spaceId = meRes.body.space.id as string;
+    await TenantContext.run(spaceId, () =>
+      prisma.milestone.update({
+        where: { id: corrupted.body.id },
+        data: { noteAuthTag: Buffer.from('0'.repeat(16)).toString('base64') },
+      }),
+    );
+
+    const listRes = await request(app.getHttpServer()).get('/milestones').set('Cookie', cookie);
+    expect(listRes.status).toBe(200);
+    const byId = new Map(listRes.body.map((m: { id: string; note: string | null }) => [m.id, m.note]));
+    expect(byId.get(corrupted.body.id)).toBeNull();
+    expect(byId.get(good.body.id)).toBe('readable note');
   });
 });
