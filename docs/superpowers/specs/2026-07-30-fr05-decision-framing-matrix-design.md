@@ -259,7 +259,8 @@ to a mixed nested/flat scheme.
 
 `POST`/`PATCH` on decisions, options, and tradeoffs return the same
 single-object shape as their respective resource (decision `PATCH`/`decide`/
-`reopen` return the detail shape including `options`; option/tradeoff
+`reopen` and `POST` return the detail shape including `options` — an empty
+array on creation, since a new decision has none yet; option/tradeoff
 `POST`/`PATCH` return just that entity).
 
 ### Validation (Zod, `packages/shared-types`)
