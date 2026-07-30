@@ -4,6 +4,7 @@ import type {
   CreateDecisionRequest,
   CreateDecisionOptionRequest,
   CreateTradeOffItemRequest,
+  DecideDecisionRequest,
   UpdateDecisionRequest,
   UpdateDecisionOptionRequest,
   UpdateTradeOffItemRequest,
@@ -83,6 +84,58 @@ export class DecisionsService {
   async remove(id: string): Promise<void> {
     await this.findDecisionOrThrow(id);
     await prisma.decision.delete({ where: { id } });
+  }
+
+  async decide(id: string, dto: DecideDecisionRequest): Promise<DecisionDetailResponse> {
+    await this.findDecisionOrThrow(id);
+    const option = await prisma.decisionOption.findFirst({ where: { id: dto.chosenOptionId, decisionId: id } });
+    if (!option) {
+      throw new BadRequestException(`Option ${dto.chosenOptionId} does not belong to decision ${id}`);
+    }
+
+    const data: {
+      status: DecisionStatus;
+      chosenOptionId: string;
+      decidedAt: Date;
+      outcomeCiphertext?: string;
+      outcomeIv?: string;
+      outcomeAuthTag?: string;
+      outcomeVersion?: number;
+    } = {
+      status: 'decided',
+      chosenOptionId: dto.chosenOptionId,
+      decidedAt: new Date(),
+    };
+
+    if ('outcomeNote' in dto) {
+      const encrypted = this.encryptIfPresent(dto.outcomeNote);
+      // Only overwrite the outcome columns if a new note was actually provided
+      // (non-empty after trim) — an omitted or empty outcomeNote on re-decide
+      // leaves the existing outcome note untouched, per the spec's lifecycle rules.
+      if (encrypted) {
+        data.outcomeCiphertext = encrypted.ciphertext;
+        data.outcomeIv = encrypted.iv;
+        data.outcomeAuthTag = encrypted.authTag;
+        data.outcomeVersion = 1;
+      }
+    }
+
+    const row = await prisma.decision.update({ where: { id }, data });
+    const options = await this.loadOptionsWithTradeOffs(id);
+    return this.toDetail(row, options);
+  }
+
+  async reopen(id: string): Promise<DecisionDetailResponse> {
+    const decision = await this.findDecisionOrThrow(id);
+    if (decision.status !== 'decided') {
+      throw new BadRequestException('Decision is already open');
+    }
+    const row = await prisma.decision.update({
+      where: { id },
+      data: { status: 'open', chosenOptionId: null, decidedAt: null },
+    });
+    const options = await this.loadOptionsWithTradeOffs(id);
+    return this.toDetail(row, options);
   }
 
   async createOption(

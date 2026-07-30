@@ -253,4 +253,169 @@ describe('DecisionsController — decision CRUD (integration)', () => {
     expect(patchRes.status).toBe(401);
     expect(deleteRes.status).toBe(401);
   });
+
+  it('decides a decision: sets status, chosenOptionId, decidedAt, and encrypts the outcome note', async () => {
+    const { cookie } = await registerWithSpace('decide-basic');
+    const created = await request(app.getHttpServer()).post('/decisions').set('Cookie', cookie).send({ title: 'x' });
+    const optionRes = await request(app.getHttpServer())
+      .post(`/decisions/${created.body.id}/options`)
+      .set('Cookie', cookie)
+      .send({ label: 'Austin' });
+
+    const res = await request(app.getHttpServer())
+      .patch(`/decisions/${created.body.id}/decide`)
+      .set('Cookie', cookie)
+      .send({ chosenOptionId: optionRes.body.id, outcomeNote: 'Chose Austin for the job market' });
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('decided');
+    expect(res.body.chosenOptionId).toBe(optionRes.body.id);
+    expect(res.body.decidedAt).not.toBeNull();
+    expect(res.body.outcomeNote).toBe('Chose Austin for the job market');
+
+    const meRes = await request(app.getHttpServer()).get('/auth/me').set('Cookie', cookie);
+    const spaceId = meRes.body.space.id as string;
+    const rawRow = await TenantContext.run(spaceId, () =>
+      prisma.decision.findFirstOrThrow({ where: { id: created.body.id } }),
+    );
+    expect(rawRow.outcomeCiphertext).not.toBeNull();
+    expect(rawRow.outcomeCiphertext).not.toContain('Chose Austin');
+  });
+
+  it('rejects deciding with a chosenOptionId belonging to a different decision', async () => {
+    const { cookie } = await registerWithSpace('decide-wrong-option');
+    const decisionA = await request(app.getHttpServer()).post('/decisions').set('Cookie', cookie).send({ title: 'A' });
+    const decisionB = await request(app.getHttpServer()).post('/decisions').set('Cookie', cookie).send({ title: 'B' });
+    const optionOnB = await request(app.getHttpServer())
+      .post(`/decisions/${decisionB.body.id}/options`)
+      .set('Cookie', cookie)
+      .send({ label: 'Option on B' });
+
+    const res = await request(app.getHttpServer())
+      .patch(`/decisions/${decisionA.body.id}/decide`)
+      .set('Cookie', cookie)
+      .send({ chosenOptionId: optionOnB.body.id });
+    expect(res.status).toBe(400);
+  });
+
+  it('re-decides an already-decided decision: omitting outcomeNote preserves the existing one, providing a new one replaces it', async () => {
+    const { cookie } = await registerWithSpace('re-decide');
+    const created = await request(app.getHttpServer()).post('/decisions').set('Cookie', cookie).send({ title: 'x' });
+    const optionA = await request(app.getHttpServer())
+      .post(`/decisions/${created.body.id}/options`)
+      .set('Cookie', cookie)
+      .send({ label: 'A' });
+    const optionB = await request(app.getHttpServer())
+      .post(`/decisions/${created.body.id}/options`)
+      .set('Cookie', cookie)
+      .send({ label: 'B' });
+
+    await request(app.getHttpServer())
+      .patch(`/decisions/${created.body.id}/decide`)
+      .set('Cookie', cookie)
+      .send({ chosenOptionId: optionA.body.id, outcomeNote: 'First choice' });
+
+    const redecideNoNote = await request(app.getHttpServer())
+      .patch(`/decisions/${created.body.id}/decide`)
+      .set('Cookie', cookie)
+      .send({ chosenOptionId: optionB.body.id });
+    expect(redecideNoNote.body.chosenOptionId).toBe(optionB.body.id);
+    expect(redecideNoNote.body.outcomeNote).toBe('First choice');
+
+    const redecideWithNote = await request(app.getHttpServer())
+      .patch(`/decisions/${created.body.id}/decide`)
+      .set('Cookie', cookie)
+      .send({ chosenOptionId: optionA.body.id, outcomeNote: 'Changed our mind again' });
+    expect(redecideWithNote.body.outcomeNote).toBe('Changed our mind again');
+  });
+
+  it('reopens a decided decision, clearing status/chosenOptionId/decidedAt but preserving the outcome note', async () => {
+    const { cookie } = await registerWithSpace('reopen-basic');
+    const created = await request(app.getHttpServer()).post('/decisions').set('Cookie', cookie).send({ title: 'x' });
+    const optionRes = await request(app.getHttpServer())
+      .post(`/decisions/${created.body.id}/options`)
+      .set('Cookie', cookie)
+      .send({ label: 'Austin' });
+    await request(app.getHttpServer())
+      .patch(`/decisions/${created.body.id}/decide`)
+      .set('Cookie', cookie)
+      .send({ chosenOptionId: optionRes.body.id, outcomeNote: 'Tried Austin' });
+
+    const res = await request(app.getHttpServer()).patch(`/decisions/${created.body.id}/reopen`).set('Cookie', cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.status).toBe('open');
+    expect(res.body.chosenOptionId).toBeNull();
+    expect(res.body.decidedAt).toBeNull();
+    expect(res.body.outcomeNote).toBe('Tried Austin');
+  });
+
+  it('rejects reopening a decision that is already open with 400', async () => {
+    const { cookie } = await registerWithSpace('reopen-already-open');
+    const created = await request(app.getHttpServer()).post('/decisions').set('Cookie', cookie).send({ title: 'x' });
+
+    const res = await request(app.getHttpServer()).patch(`/decisions/${created.body.id}/reopen`).set('Cookie', cookie);
+    expect(res.status).toBe(400);
+  });
+
+  it('blocks deleting an option that is the chosen option of a decided decision', async () => {
+    const { cookie } = await registerWithSpace('delete-chosen-blocked');
+    const created = await request(app.getHttpServer()).post('/decisions').set('Cookie', cookie).send({ title: 'x' });
+    const optionRes = await request(app.getHttpServer())
+      .post(`/decisions/${created.body.id}/options`)
+      .set('Cookie', cookie)
+      .send({ label: 'Austin' });
+    await request(app.getHttpServer())
+      .patch(`/decisions/${created.body.id}/decide`)
+      .set('Cookie', cookie)
+      .send({ chosenOptionId: optionRes.body.id });
+
+    const deleteRes = await request(app.getHttpServer())
+      .delete(`/decisions/${created.body.id}/options/${optionRes.body.id}`)
+      .set('Cookie', cookie);
+    expect(deleteRes.status).toBe(400);
+
+    const detailRes = await request(app.getHttpServer()).get(`/decisions/${created.body.id}`).set('Cookie', cookie);
+    expect(detailRes.body.chosenOptionId).toBe(optionRes.body.id);
+    expect(detailRes.body.options).toHaveLength(1);
+  });
+
+  it('either partner may decide and reopen a decision the other created', async () => {
+    const creator = await registerWithSpace('either-partner-lifecycle-creator');
+    const codeRes = await request(app.getHttpServer())
+      .post('/spaces/pairing-codes')
+      .set('Cookie', creator.cookie)
+      .send({});
+    const joinerEmail = `decisions-either-partner-lifecycle-joiner-${Date.now()}-${Math.random().toString(36).slice(2)}@example.com`;
+    createdEmails.push(joinerEmail);
+    const joinerRegister = await request(app.getHttpServer())
+      .post('/auth/register')
+      .send({ email: joinerEmail, password: 'supersecret' });
+    const joinerRegisterCookie = joinerRegister.headers['set-cookie'] as unknown as string[];
+    const joinerRedeem = await request(app.getHttpServer())
+      .post('/spaces/pairing-codes/redeem')
+      .set('Cookie', joinerRegisterCookie)
+      .send({ code: codeRes.body.code });
+    const joinerCookie = joinerRedeem.headers['set-cookie'] as unknown as string[];
+
+    const created = await request(app.getHttpServer())
+      .post('/decisions')
+      .set('Cookie', creator.cookie)
+      .send({ title: 'Creator decision' });
+    const optionRes = await request(app.getHttpServer())
+      .post(`/decisions/${created.body.id}/options`)
+      .set('Cookie', creator.cookie)
+      .send({ label: 'Austin' });
+
+    const decideByJoiner = await request(app.getHttpServer())
+      .patch(`/decisions/${created.body.id}/decide`)
+      .set('Cookie', joinerCookie)
+      .send({ chosenOptionId: optionRes.body.id });
+    expect(decideByJoiner.status).toBe(200);
+
+    const reopenByJoiner = await request(app.getHttpServer())
+      .patch(`/decisions/${created.body.id}/reopen`)
+      .set('Cookie', joinerCookie);
+    expect(reopenByJoiner.status).toBe(200);
+  });
 });

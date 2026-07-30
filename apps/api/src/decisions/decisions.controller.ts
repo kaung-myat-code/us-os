@@ -3,12 +3,14 @@ import {
   CreateDecisionRequestSchema,
   CreateDecisionOptionRequestSchema,
   CreateTradeOffItemRequestSchema,
+  DecideDecisionRequestSchema,
   UpdateDecisionRequestSchema,
   UpdateDecisionOptionRequestSchema,
   UpdateTradeOffItemRequestSchema,
   type CreateDecisionRequest,
   type CreateDecisionOptionRequest,
   type CreateTradeOffItemRequest,
+  type DecideDecisionRequest,
   type UpdateDecisionRequest,
   type UpdateDecisionOptionRequest,
   type UpdateTradeOffItemRequest,
@@ -66,6 +68,24 @@ export class DecisionsController {
     const { spaceId } = req.user as AuthenticatedUser;
     requireSpaceId(spaceId);
     await this.decisionsService.remove(id);
+  }
+
+  @Patch(':id/decide')
+  async decide(
+    @Req() req: Request,
+    @Param('id') id: string,
+    @Body(createZodValidationPipe(DecideDecisionRequestSchema)) dto: DecideDecisionRequest,
+  ) {
+    const { spaceId } = req.user as AuthenticatedUser;
+    requireSpaceId(spaceId);
+    return this.decisionsService.decide(id, dto);
+  }
+
+  @Patch(':id/reopen')
+  async reopen(@Req() req: Request, @Param('id') id: string) {
+    const { spaceId } = req.user as AuthenticatedUser;
+    requireSpaceId(spaceId);
+    return this.decisionsService.reopen(id);
   }
 
   @Post(':id/options')
