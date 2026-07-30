@@ -2,7 +2,11 @@ import { BadRequestException, Injectable, NotFoundException } from '@nestjs/comm
 import { prisma } from '@us-os/database';
 import type {
   CreateDecisionRequest,
+  CreateDecisionOptionRequest,
+  CreateTradeOffItemRequest,
   UpdateDecisionRequest,
+  UpdateDecisionOptionRequest,
+  UpdateTradeOffItemRequest,
   DecisionDetailResponse,
   DecisionListItemResponse,
   DecisionOptionResponse,
@@ -16,6 +20,9 @@ type DecisionRow = Awaited<ReturnType<typeof prisma.decision.create>>;
 type DecisionOptionRow = Awaited<ReturnType<typeof prisma.decisionOption.create>>;
 type TradeOffItemRow = Awaited<ReturnType<typeof prisma.tradeOffItem.create>>;
 type OptionWithTradeOffs = DecisionOptionRow & { tradeOffs: TradeOffItemRow[] };
+
+const MAX_OPTIONS_PER_DECISION = 6;
+const MAX_TRADEOFFS_PER_OPTION = 15;
 
 @Injectable()
 export class DecisionsService {
@@ -76,6 +83,89 @@ export class DecisionsService {
   async remove(id: string): Promise<void> {
     await this.findDecisionOrThrow(id);
     await prisma.decision.delete({ where: { id } });
+  }
+
+  async createOption(
+    decisionId: string,
+    dto: CreateDecisionOptionRequest,
+    spaceId: string,
+  ): Promise<DecisionOptionResponse> {
+    await this.findDecisionOrThrow(decisionId);
+    const count = await prisma.decisionOption.count({ where: { decisionId } });
+    if (count >= MAX_OPTIONS_PER_DECISION) {
+      throw new BadRequestException(
+        `Decision ${decisionId} already has the maximum of ${MAX_OPTIONS_PER_DECISION} options`,
+      );
+    }
+    const row = await prisma.decisionOption.create({ data: { spaceId, decisionId, label: dto.label } });
+    return this.toOptionResponse(row, []);
+  }
+
+  async updateOption(
+    decisionId: string,
+    optionId: string,
+    dto: UpdateDecisionOptionRequest,
+  ): Promise<DecisionOptionResponse> {
+    const option = await this.findOptionOrThrow(decisionId, optionId);
+    const row = await prisma.decisionOption.update({ where: { id: option.id }, data: { label: dto.label } });
+    const tradeOffs = await prisma.tradeOffItem.findMany({ where: { optionId }, orderBy: { createdAt: 'asc' } });
+    return this.toOptionResponse(row, tradeOffs);
+  }
+
+  async removeOption(decisionId: string, optionId: string): Promise<void> {
+    await this.findOptionOrThrow(decisionId, optionId);
+    const referencingDecision = await prisma.decision.findFirst({ where: { chosenOptionId: optionId } });
+    if (referencingDecision) {
+      throw new BadRequestException(
+        `Cannot delete option ${optionId} — it is the chosen option of decision ${referencingDecision.id}. Reopen the decision first.`,
+      );
+    }
+    await prisma.decisionOption.delete({ where: { id: optionId } });
+  }
+
+  async createTradeOff(
+    decisionId: string,
+    optionId: string,
+    dto: CreateTradeOffItemRequest,
+    spaceId: string,
+  ): Promise<TradeOffItemResponse> {
+    await this.findOptionOrThrow(decisionId, optionId);
+    const count = await prisma.tradeOffItem.count({ where: { optionId } });
+    if (count >= MAX_TRADEOFFS_PER_OPTION) {
+      throw new BadRequestException(
+        `Option ${optionId} already has the maximum of ${MAX_TRADEOFFS_PER_OPTION} trade-off items`,
+      );
+    }
+    const row = await prisma.tradeOffItem.create({
+      data: { spaceId, optionId, type: dto.type, label: dto.label, weight: dto.weight },
+    });
+    return this.toTradeOffResponse(row);
+  }
+
+  async updateTradeOff(
+    decisionId: string,
+    optionId: string,
+    tradeoffId: string,
+    dto: UpdateTradeOffItemRequest,
+  ): Promise<TradeOffItemResponse> {
+    await this.findOptionOrThrow(decisionId, optionId);
+    const tradeoff = await prisma.tradeOffItem.findFirst({ where: { id: tradeoffId, optionId } });
+    if (!tradeoff) throw new NotFoundException('Trade-off item not found');
+
+    const data: { type?: TradeOffType; label?: string; weight?: number } = {};
+    if (dto.type !== undefined) data.type = dto.type;
+    if (dto.label !== undefined) data.label = dto.label;
+    if (dto.weight !== undefined) data.weight = dto.weight;
+
+    const row = await prisma.tradeOffItem.update({ where: { id: tradeoff.id }, data });
+    return this.toTradeOffResponse(row);
+  }
+
+  async removeTradeOff(decisionId: string, optionId: string, tradeoffId: string): Promise<void> {
+    await this.findOptionOrThrow(decisionId, optionId);
+    const tradeoff = await prisma.tradeOffItem.findFirst({ where: { id: tradeoffId, optionId } });
+    if (!tradeoff) throw new NotFoundException('Trade-off item not found');
+    await prisma.tradeOffItem.delete({ where: { id: tradeoff.id } });
   }
 
   // --- Helpers used by this task and extended by later tasks ---
