@@ -158,12 +158,24 @@ describe('DecisionsController — decision CRUD (integration)', () => {
       .post('/decisions')
       .set('Cookie', cookie)
       .send({ title: 'To delete' });
+    const optionRes = await request(app.getHttpServer())
+      .post(`/decisions/${created.body.id}/options`)
+      .set('Cookie', cookie)
+      .send({ label: 'Doomed option' });
 
     const deleteRes = await request(app.getHttpServer()).delete(`/decisions/${created.body.id}`).set('Cookie', cookie);
     expect(deleteRes.status).toBe(204);
 
     const listRes = await request(app.getHttpServer()).get('/decisions').set('Cookie', cookie);
     expect(listRes.body.map((d: { id: string }) => d.id)).not.toContain(created.body.id);
+
+    const meRes = await request(app.getHttpServer()).get('/auth/me').set('Cookie', cookie);
+    const spaceId = meRes.body.space.id as string;
+    const remainingOptions = await TenantContext.run(spaceId, () =>
+      prisma.decisionOption.findMany({ where: { decisionId: created.body.id } }),
+    );
+    expect(remainingOptions).toEqual([]);
+    expect(optionRes.status).toBe(201);
   });
 
   it('either partner in the space may edit and delete a decision the other created', async () => {
