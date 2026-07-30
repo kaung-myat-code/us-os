@@ -14,7 +14,7 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.basePrisma = basePrisma;
 }
 
-const TENANT_SCOPED_MODELS = new Set(['Milestone']);
+const TENANT_SCOPED_MODELS = new Set(['Milestone', 'Decision', 'DecisionOption', 'TradeOffItem']);
 
 // prisma.$transaction() deliberately delegates to the un-extended basePrisma's
 // $transaction rather than going through the query extension below: the `tx`
@@ -34,7 +34,11 @@ export const prisma = basePrisma.$extends({
       if (!model || !TENANT_SCOPED_MODELS.has(model)) {
         return query(args);
       }
-      const camelModel = (model.charAt(0).toLowerCase() + model.slice(1)) as 'milestone';
+      const camelModel = (model.charAt(0).toLowerCase() + model.slice(1)) as
+        | 'milestone'
+        | 'decision'
+        | 'decisionOption'
+        | 'tradeOffItem';
 
       const activeTx = TenantContext.activeTx;
       if (activeTx) {
