@@ -123,6 +123,7 @@ export class GoalsService {
     return {
       id: row.id,
       title: row.title,
+      createdBy: row.createdBy,
       category: row.category as GoalCategory,
       targetDate: row.targetDate ? row.targetDate.toISOString().slice(0, 10) : null,
       progress: row.progress,

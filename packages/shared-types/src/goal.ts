@@ -27,6 +27,7 @@ export type UpdateGoalRequest = z.infer<typeof UpdateGoalRequestSchema>;
 export interface GoalResponse {
   id: string;
   title: string;
+  createdBy: string;
   category: GoalCategory;
   targetDate: string | null;
   progress: number;

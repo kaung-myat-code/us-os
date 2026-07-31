@@ -64,6 +64,7 @@ describe('GoalsController (integration)', () => {
 
     expect(res.status).toBe(201);
     expect(res.body.title).toBe('Run a marathon');
+    expect(typeof res.body.createdBy).toBe('string');
     expect(res.body.category).toBe('other');
     expect(res.body.progress).toBe(0);
     expect(res.body.status).toBe('active');
