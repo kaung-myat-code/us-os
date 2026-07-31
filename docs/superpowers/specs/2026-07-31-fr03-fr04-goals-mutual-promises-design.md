@@ -177,6 +177,7 @@ Both modules: JWT-guarded, space scope implicit via `TenantMiddleware`/RLS
   {
     "id": "uuid",
     "title": "Save for a house down payment",
+    "createdBy": "uuid",
     "category": "financial",
     "targetDate": "2027-06-01",
     "progress": 70,
