@@ -19,6 +19,8 @@ model Space {
   decisions       Decision[]
   decisionOptions DecisionOption[]
   tradeOffItems   TradeOffItem[]
+  goals    Goal[]
+  promises Promise[]
 
   @@map("spaces")
 }
@@ -33,6 +35,9 @@ model User {
   memberships       SpaceMembership[]
   createdMilestones Milestone[]
   createdDecisions Decision[]
+  createdGoals      Goal[]
+  promisedPromises  Promise[] @relation("PromisedBy")
+  resolvedPromises  Promise[] @relation("ResolvedBy")
 
   @@map("users")
 }
@@ -148,4 +153,52 @@ model TradeOffItem {
   @@index([optionId])
   @@index([spaceId])
   @@map("trade_off_items")
+}
+
+model Goal {
+  id                     String    @id @default(uuid()) @db.Uuid
+  spaceId                String    @map("space_id") @db.Uuid
+  createdBy              String    @map("created_by") @db.Uuid
+  title                  String
+  category               String    @default("other")
+  targetDate             DateTime? @map("target_date") @db.Date
+  progress               Int       @default(0)
+  status                 String    @default("active")
+  achievedAt             DateTime? @map("achieved_at")
+  descriptionCiphertext  String?   @map("description_ciphertext")
+  descriptionIv          String?   @map("description_iv")
+  descriptionAuthTag     String?   @map("description_auth_tag")
+  descriptionVersion     Int?      @map("description_version") @default(1)
+  createdAt              DateTime  @default(now()) @map("created_at")
+  updatedAt              DateTime  @updatedAt @map("updated_at")
+
+  space   Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  creator User  @relation(fields: [createdBy], references: [id])
+
+  @@index([spaceId])
+  @@map("goals")
+}
+
+model Promise {
+  id             String    @id @default(uuid()) @db.Uuid
+  spaceId        String    @map("space_id") @db.Uuid
+  promisedBy     String    @map("promised_by") @db.Uuid
+  title          String
+  dueDate        DateTime? @map("due_date") @db.Date
+  status         String    @default("pending")
+  resolvedAt     DateTime? @map("resolved_at")
+  resolvedBy     String?   @map("resolved_by") @db.Uuid
+  noteCiphertext String?   @map("note_ciphertext")
+  noteIv         String?   @map("note_iv")
+  noteAuthTag    String?   @map("note_auth_tag")
+  noteVersion    Int?      @map("note_version") @default(1)
+  createdAt      DateTime  @default(now()) @map("created_at")
+  updatedAt      DateTime  @updatedAt @map("updated_at")
+
+  space    Space @relation(fields: [spaceId], references: [id], onDelete: Cascade)
+  promisor User  @relation("PromisedBy", fields: [promisedBy], references: [id])
+  resolver User? @relation("ResolvedBy", fields: [resolvedBy], references: [id], onDelete: Restrict)
+
+  @@index([spaceId])
+  @@map("promises")
 }

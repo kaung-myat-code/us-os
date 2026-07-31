@@ -14,7 +14,7 @@ if (process.env.NODE_ENV !== 'production') {
   globalForPrisma.basePrisma = basePrisma;
 }
 
-const TENANT_SCOPED_MODELS = new Set(['Milestone', 'Decision', 'DecisionOption', 'TradeOffItem']);
+const TENANT_SCOPED_MODELS = new Set(['Milestone', 'Decision', 'DecisionOption', 'TradeOffItem', 'Goal', 'Promise']);
 
 // prisma.$transaction() deliberately delegates to the un-extended basePrisma's
 // $transaction rather than going through the query extension below: the `tx`
@@ -38,7 +38,9 @@ export const prisma = basePrisma.$extends({
         | 'milestone'
         | 'decision'
         | 'decisionOption'
-        | 'tradeOffItem';
+        | 'tradeOffItem'
+        | 'goal'
+        | 'promise';
 
       const activeTx = TenantContext.activeTx;
       if (activeTx) {
