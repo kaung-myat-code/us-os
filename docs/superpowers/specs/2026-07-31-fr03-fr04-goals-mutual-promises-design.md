@@ -314,3 +314,11 @@ concurrency model for just these two features.
 - No notifications/reminders for `targetDate`/`dueDate`.
 - No charts, progress visualizations, or drag-reorder.
 - Frontend visual polish (responsive layout, icons/colors).
+- The `/goals` progress input fires a `PATCH` on every keystroke against a
+  server-controlled value. A rare race exists where out-of-order async
+  responses during fast multi-digit typing can revert the displayed value
+  to a stale intermediate keystroke's result. Accepted for V1 given the
+  narrow window (same-input keystroke-level timing) and low severity (a
+  visual revert, not data loss — the last successful PATCH always wins
+  server-side). A blur-commit pattern (local state, single PATCH on blur)
+  is the recommended fix if this UI pattern is reused or polished later.
