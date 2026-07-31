@@ -4,3 +4,4 @@ export * from './space';
 export * from './milestone';
 export * from './decision';
 export * from './goal';
+export * from './promise';
