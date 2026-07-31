@@ -33,6 +33,18 @@ describe('CreatePromiseRequestSchema', () => {
   it('accepts an explicit null note', () => {
     expect(CreatePromiseRequestSchema.safeParse({ title: 'x', note: null }).success).toBe(true);
   });
+
+  it('rejects a malformed dueDate', () => {
+    expect(CreatePromiseRequestSchema.safeParse({ title: 'x', dueDate: 'not-a-date' }).success).toBe(false);
+  });
+
+  it('accepts a null dueDate', () => {
+    expect(CreatePromiseRequestSchema.safeParse({ title: 'x', dueDate: null }).success).toBe(true);
+  });
+
+  it('accepts a valid dueDate', () => {
+    expect(CreatePromiseRequestSchema.safeParse({ title: 'x', dueDate: '2026-12-31' }).success).toBe(true);
+  });
 });
 
 describe('UpdatePromiseRequestSchema', () => {

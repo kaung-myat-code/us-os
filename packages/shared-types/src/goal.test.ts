@@ -49,6 +49,18 @@ describe('CreateGoalRequestSchema', () => {
   it('accepts an explicit null description', () => {
     expect(CreateGoalRequestSchema.safeParse({ title: 'x', description: null }).success).toBe(true);
   });
+
+  it('rejects a malformed targetDate', () => {
+    expect(CreateGoalRequestSchema.safeParse({ title: 'x', targetDate: 'not-a-date' }).success).toBe(false);
+  });
+
+  it('accepts a null targetDate', () => {
+    expect(CreateGoalRequestSchema.safeParse({ title: 'x', targetDate: null }).success).toBe(true);
+  });
+
+  it('accepts a valid targetDate', () => {
+    expect(CreateGoalRequestSchema.safeParse({ title: 'x', targetDate: '2026-12-31' }).success).toBe(true);
+  });
 });
 
 describe('UpdateGoalRequestSchema', () => {
